@@ -10,3 +10,6 @@ __pycache__/
 *.sqlite*
 .vercel/
 .DS_Store
+
+# Local Loom workspace metadata (all files and subdirectories)
+.loom/
