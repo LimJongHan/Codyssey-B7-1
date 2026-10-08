@@ -328,7 +328,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(14,11,40,0.80);
+  background: rgba(249, 248, 255, 0.88);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-sub);
@@ -671,9 +671,9 @@
   padding: 16px 22px 24px;
   background: linear-gradient(
     180deg,
-    rgba(14,11,40,0)   0%,
-    rgba(14,11,40,0.90) 28%,
-    rgba(14,11,40,1)    100%
+    rgba(249, 248, 255, 0)    0%,
+    rgba(249, 248, 255, 0.92) 28%,
+    rgba(249, 248, 255, 1)    100%
   );
   display: flex;
   justify-content: center;
