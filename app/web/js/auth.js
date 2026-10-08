@@ -11,10 +11,8 @@
   const tabLogin     = document.getElementById('tabLogin');
   const tabRegister  = document.getElementById('tabRegister');
   const authForm     = document.getElementById('authForm');
-  const nameField    = document.getElementById('nameField');
-  const userEmail    = document.getElementById('userEmail');
+  const userId       = document.getElementById('userId');
   const userPw       = document.getElementById('userPw');
-  const userName     = document.getElementById('userName');
   const submitBtn    = document.getElementById('submitBtn');
   const submitLabel  = document.getElementById('submitLabel');
   const togglePw     = document.getElementById('togglePw');
@@ -23,9 +21,8 @@
   const toastCont    = document.getElementById('toastContainer');
 
   // 에러 span
-  const emailErr = document.getElementById('emailError');
+  const idErr    = document.getElementById('idError');
   const pwErr    = document.getElementById('pwError');
-  const nameErr  = document.getElementById('nameError');
 
   let isRegister = false;
   let isLoading  = false;
@@ -59,7 +56,6 @@
     tabLogin?.classList.toggle('is-active', !toRegister);
     tabRegister?.classList.toggle('is-active', toRegister);
 
-    if (nameField) nameField.style.display = toRegister ? '' : 'none';
     if (authTitle) authTitle.textContent = toRegister ? '해피와 함께 시작해요!' : '다시 만나서 반가워요!';
     if (authDesc)  authDesc.textContent  = toRegister
       ? '지금 가입하면 모든 대화 기록을 보관할 수 있어요.'
@@ -106,41 +102,34 @@
   }
 
   function clearAllErrors () {
-    clearFieldError(userEmail, emailErr);
+    clearFieldError(userId, idErr);
     clearFieldError(userPw, pwErr);
-    clearFieldError(userName, nameErr);
   }
 
   // 포커스 아웃 시 즉시 검증
-  userEmail?.addEventListener('blur', () => validateEmail(true));
-  userPw?.addEventListener('blur',    () => validatePw(true));
-  userName?.addEventListener('blur',  () => { if (isRegister) validateName(true); });
+  userId?.addEventListener('blur', () => validateId(true));
+  userPw?.addEventListener('blur', () => validatePw(true));
 
   // 타이핑 중 에러 즉시 해소
-  userEmail?.addEventListener('input', () => clearFieldError(userEmail, emailErr));
-  userPw?.addEventListener('input',    () => clearFieldError(userPw, pwErr));
-  userName?.addEventListener('input',  () => clearFieldError(userName, nameErr));
+  userId?.addEventListener('input', () => clearFieldError(userId, idErr));
+  userPw?.addEventListener('input', () => clearFieldError(userPw, pwErr));
 
   /* ==========================================================================
      검증 함수
      ========================================================================== */
-  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  const ID_RE = /^[A-Za-z0-9_]{3,30}$/; // 서버 Credentials.username 규칙과 같다
 
-  function validateEmail (show = false) {
-    const val = userEmail?.value.trim() ?? '';
+  function validateId (show = false) {
+    const val = userId?.value.trim() ?? '';
     if (!val) {
-      if (show) showFieldError(userEmail, emailErr, '이메일 주소를 입력해 주세요.');
+      if (show) showFieldError(userId, idErr, '아이디를 입력해 주세요.');
       return false;
     }
-    if (!EMAIL_RE.test(val)) {
-      if (show) showFieldError(userEmail, emailErr, '올바른 이메일 형식이 아닙니다.');
+    if (!ID_RE.test(val)) {
+      if (show) showFieldError(userId, idErr, '아이디는 영문·숫자·밑줄 3~30자로 입력해 주세요.');
       return false;
     }
-    if (val.length > 100) {
-      if (show) showFieldError(userEmail, emailErr, '이메일은 100자 이내로 입력해 주세요.');
-      return false;
-    }
-    clearFieldError(userEmail, emailErr);
+    clearFieldError(userId, idErr);
     return true;
   }
 
@@ -162,25 +151,6 @@
     return true;
   }
 
-  function validateName (show = false) {
-    if (!isRegister) return true;
-    const val = userName?.value.trim() ?? '';
-    if (!val) {
-      if (show) showFieldError(userName, nameErr, '닉네임을 입력해 주세요.');
-      return false;
-    }
-    if (val.length < 2) {
-      if (show) showFieldError(userName, nameErr, '닉네임은 2자 이상이어야 합니다.');
-      return false;
-    }
-    if (val.length > 20) {
-      if (show) showFieldError(userName, nameErr, '닉네임은 20자 이내로 입력해 주세요.');
-      return false;
-    }
-    clearFieldError(userName, nameErr);
-    return true;
-  }
-
   /* ==========================================================================
      폼 제출
      ========================================================================== */
@@ -197,14 +167,13 @@
 
     // 전체 검증 실행
     const ok = [
-      validateEmail(true),
+      validateId(true),
       validatePw(true),
-      validateName(true),
     ].every(Boolean);
 
     if (!ok) {
       // 첫 번째 에러 필드에 포커스
-      const errField = [userName, userEmail, userPw]
+      const errField = [userId, userPw]
         .find(f => f?.classList.contains('is-error'));
       errField?.focus();
       return;
@@ -214,17 +183,11 @@
 
     try {
       const endpoint = isRegister ? '/api/auth/signup' : '/api/auth/login';
-      
-      // 팀 규격: username (3~30자, 영문/숫자/언더스코어), password (8자 이상)
-      // 이메일 입력값에서 유효한 username을 추출하거나 name/email을 매핑
-      const emailVal = userEmail?.value.trim() ?? '';
-      const rawUser = userName?.value.trim() || emailVal.split('@')[0] || 'user';
-      // 영문/숫자/언더스코어만 남기고 3자 이상 보장
-      const cleanUser = rawUser.replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 30);
-      const username = cleanUser.length >= 3 ? cleanUser : (cleanUser + '_01').slice(0, 30);
 
+      // 팀 규격: username (3~30자, 영문/숫자/언더스코어), password (8자 이상)
+      // 가입과 로그인에 입력한 아이디를 그대로 보낸다. 다른 값으로 바꾸면 가입한 계정으로 로그인할 수 없다.
       const payload = {
-        username: username,
+        username: userId.value.trim(),
         password: userPw?.value,
       };
 
@@ -251,7 +214,7 @@
         }
       } else {
         if (res.status === 409) {
-          showFieldError(userEmail, emailErr, data?.detail || '이미 사용 중인 아이디입니다.');
+          showFieldError(userId, idErr, data?.detail || '이미 사용 중인 아이디입니다.');
         } else if (res.status === 401) {
           showFieldError(userPw, pwErr, data?.detail || '아이디 또는 비밀번호가 일치하지 않아요.');
         } else if (res.status === 422) {
