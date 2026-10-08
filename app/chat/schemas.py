@@ -27,3 +27,12 @@ class Exchange(BaseModel):
     question: str
     answer: str
     created_at: datetime
+
+
+class ChatDelta(BaseModel):
+    text: str
+
+
+class ChatError(BaseModel):
+    detail: str
+    status_code: int

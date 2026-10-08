@@ -11,7 +11,7 @@ from app.ai.service import AIError, Message, stream_reply
 from app.db import connect
 from app.auth.dependencies import get_current_user
 from app.auth.schemas import User
-from app.chat.schemas import ChatRequest, Exchange, Room, RoomCreate
+from app.chat.schemas import ChatDelta, ChatError, ChatRequest, Exchange, Room, RoomCreate
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +87,7 @@ async def send_message_stream(
                 if await request.is_disconnected():
                     return
                 parts.append(text)
-                yield ServerSentEvent(event="delta", data={"text": text})
+                yield ServerSentEvent(event="delta", data=ChatDelta(text=text))
         if await request.is_disconnected():
             return
         with connect() as db:
@@ -100,7 +100,7 @@ async def send_message_stream(
         logger.info("db_save_success user_id=%s room_id=%s exchange_id=%s", user.id, room_id, exchange.id)
         yield ServerSentEvent(event="done", data=exchange)
     except AIError as error:
-        yield ServerSentEvent(event="error", data={"detail": str(error), "status_code": error.status_code})
+        yield ServerSentEvent(event="error", data=ChatError(detail=str(error), status_code=error.status_code))
     except sqlite3.Error:
         logger.error("db_save_failure user_id=%s room_id=%s", user.id, room_id)
-        yield ServerSentEvent(event="error", data={"detail": "대화를 저장하지 못했습니다.", "status_code": 500})
+        yield ServerSentEvent(event="error", data=ChatError(detail="대화를 저장하지 못했습니다.", status_code=500))

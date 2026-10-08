@@ -55,6 +55,8 @@ class ChatStreamTests(unittest.TestCase):
             response = self.send()
         self.assertEqual(response.status_code, 200)
         self.assertIn("text/event-stream", response.headers["content-type"])
+        self.assertIn("힘든 하루였군요.", response.text)
+        self.assertNotIn(r"\u", response.text)
         events = self.events(response)
         self.assertEqual([event for event, _ in events], ["delta", "delta", "done"])
         with connect() as db:
@@ -96,7 +98,9 @@ class ChatStreamTests(unittest.TestCase):
                 yield "부분 응답"
                 raise AIError("응답 실패", code)
             with self.subTest(code=code), patch("app.chat.router.stream_reply", stream):
-                events = self.events(self.send())
+                response = self.send()
+                self.assertIn("응답 실패", response.text)
+                events = self.events(response)
                 self.assertEqual([event for event, _ in events], ["delta", "error"])
                 self.assertEqual(events[-1][1]["status_code"], code)
                 self.assertEqual(self.count(), 0)
