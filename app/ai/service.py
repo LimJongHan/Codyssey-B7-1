@@ -2,9 +2,14 @@ import logging
 import math
 import os
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Literal, TypedDict
 
-from openai import APIError, APITimeoutError, AsyncOpenAI
+from openai import (
+    APIError, APITimeoutError, AsyncOpenAI,
+    ContentFilterFinishReasonError, LengthFinishReasonError,
+)
+from openai.types.chat import ChatCompletion
 
 logger = logging.getLogger(__name__)
 SYSTEM_PROMPT = (
@@ -28,7 +33,8 @@ class AIError(Exception):
         self.status_code = status_code
 
 
-def _create_client() -> AsyncOpenAI:
+@asynccontextmanager
+async def _ai_client() -> AsyncIterator[AsyncOpenAI]:
     api_key = os.getenv("AI_API_KEY", "").strip()
     try:
         timeout = float(os.getenv("AI_TIMEOUT_SECONDS", "30"))
@@ -38,71 +44,55 @@ def _create_client() -> AsyncOpenAI:
         logger.error("ai_call_failure reason=configuration")
         raise AIError("AI 서비스 설정을 확인해 주세요.", 503) from None
 
-    return AsyncOpenAI(
-        api_key=api_key,
-        base_url="https://copa.codyssey.kr/v1",
-        timeout=timeout,
-        max_retries=0,
-    )
-
-
-async def generate_reply(messages: list[Message]) -> str:
-    """새 질문을 포함한 최신 메시지 20개를 사용하고 응답 텍스트만 반환한다."""
-    model = os.getenv("AI_MODEL", "").strip() or "gpt-5-mini"
     logger.info("ai_call_start")
     try:
-        async with _create_client() as client:
-            response = await client.chat.completions.create(
-                model=model,
-                messages=[{"role": "system", "content": SYSTEM_PROMPT}, *messages[-20:]],
-            )
+        async with AsyncOpenAI(
+            api_key=api_key,
+            base_url="https://copa.codyssey.kr/v1",
+            timeout=timeout,
+            max_retries=0,
+        ) as client:
+            yield client
     except APITimeoutError:
         logger.warning("ai_call_failure reason=timeout")
         raise AIError("응답이 지연되고 있어요. 잠시 후 다시 시도해 주세요.", 504) from None
+    except (LengthFinishReasonError, ContentFilterFinishReasonError):
+        logger.warning("ai_call_failure reason=incomplete_response")
+        raise AIError("답변을 완성하지 못했어요. 다시 시도해 주세요.") from None
     except APIError as error:
         logger.warning("ai_call_failure reason=%s", type(error).__name__)
         raise AIError("지금은 답변을 받을 수 없어요. 잠시 후 다시 시도해 주세요.") from None
+    else:
+        logger.info("ai_call_success")
 
+
+def _answer(response: ChatCompletion) -> str:
     choice = response.choices[0] if response.choices else None
     answer = (choice.message.content or "").strip() if choice else ""
     if not choice or choice.finish_reason != "stop" or not answer:
         logger.warning("ai_call_failure reason=invalid_response")
         raise AIError("답변을 완성하지 못했어요. 다시 시도해 주세요.")
-    logger.info("ai_call_success")
     return answer
 
 
-async def stream_reply(messages: list[Message]) -> AsyncIterator[str]:
-    """응답 조각을 순서대로 내보낸다. 정상 종료해야 완성된 답변이다."""
-    model = os.getenv("AI_MODEL", "").strip() or "gpt-5-mini"
-    logger.info("ai_call_start")
-    finish_reason = None
-    has_text = False
-    try:
-        async with _create_client() as client:
-            stream = await client.chat.completions.create(
-                model=model,
-                messages=[{"role": "system", "content": SYSTEM_PROMPT}, *messages[-20:]],
-                stream=True,
-            )
-            async with stream:
-                async for chunk in stream:
-                    if not chunk.choices:
-                        continue
-                    choice = chunk.choices[0]
-                    if choice.finish_reason:
-                        finish_reason = choice.finish_reason
-                    if choice.delta.content:
-                        has_text = has_text or bool(choice.delta.content.strip())
-                        yield choice.delta.content
-    except APITimeoutError:
-        logger.warning("ai_call_failure reason=timeout")
-        raise AIError("응답이 지연되고 있어요. 잠시 후 다시 시도해 주세요.", 504) from None
-    except APIError as error:
-        logger.warning("ai_call_failure reason=%s", type(error).__name__)
-        raise AIError("지금은 답변을 받을 수 없어요. 잠시 후 다시 시도해 주세요.") from None
+async def generate_reply(messages: list[Message]) -> str:
+    """새 질문을 포함한 최신 메시지 20개를 사용하고 응답 텍스트만 반환한다."""
+    async with _ai_client() as client:
+        response = await client.chat.completions.create(
+            model=os.getenv("AI_MODEL", "").strip() or "gpt-5-mini",
+            messages=[{"role": "system", "content": SYSTEM_PROMPT}, *messages[-20:]],
+        )
+        return _answer(response)
 
-    if finish_reason != "stop" or not has_text:
-        logger.warning("ai_call_failure reason=incomplete_stream")
-        raise AIError("답변을 완성하지 못했어요. 다시 시도해 주세요.")
-    logger.info("ai_call_success")
+
+async def stream_reply(messages: list[Message]) -> AsyncIterator[str]:
+    """SDK의 텍스트 이벤트를 전달하고, 종료 시 완성된 답변인지 확인한다."""
+    async with _ai_client() as client:
+        async with client.chat.completions.stream(
+            model=os.getenv("AI_MODEL", "").strip() or "gpt-5-mini",
+            messages=[{"role": "system", "content": SYSTEM_PROMPT}, *messages[-20:]],
+        ) as stream:
+            async for event in stream:
+                if event.type == "content.delta":
+                    yield event.delta
+            _answer(await stream.get_final_completion())

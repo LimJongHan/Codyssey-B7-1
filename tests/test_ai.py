@@ -142,11 +142,11 @@ class AITests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(body["stream"])
             self.assertEqual(body["messages"][1:], messages[-20:])
             events = [
-                {"choices": [{"delta": {"content": "힘내"}, "finish_reason": None}]},
-                {"choices": [{"delta": {"content": "세요!"}, "finish_reason": None}]},
-                {"choices": [{"delta": {}, "finish_reason": "stop"}]},
+                {"choices": [{"index": 0, "delta": {"role": "assistant", "content": "힘내"}, "finish_reason": None}]},
+                {"choices": [{"index": 0, "delta": {"role": "assistant", "content": "세요!"}, "finish_reason": None}]},
+                {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]},
             ]
-            data = "".join("data: " + json.dumps(event) + "\n\n" for event in events)
+            data = "".join("data: " + json.dumps({"id": "chatcmpl_test", "object": "chat.completion.chunk", "created": 0, "model": "gpt-5-mini", **event}) + "\n\n" for event in events)
             return httpx2.Response(200, text=data + "data: [DONE]\n\n",
                                   headers={"content-type": "text/event-stream"})
         self.mock_api(handler)
@@ -155,9 +155,9 @@ class AITests(unittest.IsolatedAsyncioTestCase):
     async def test_stream_requires_complete_nonempty_response(self):
         for content, reason in [("부분 답변", None), ("부분 답변", "length"), ("", "stop")]:
             with self.subTest(reason=reason):
-                event = {"choices": [{"delta": {"content": content}, "finish_reason": reason}]}
+                event = {"choices": [{"index": 0, "delta": {"role": "assistant", "content": content}, "finish_reason": reason}]}
                 self.mock_api(lambda request: httpx2.Response(
-                    200, text="data: " + json.dumps(event) + "\n\ndata: [DONE]\n\n",
+                    200, text="data: " + json.dumps({"id": "chatcmpl_test", "object": "chat.completion.chunk", "created": 0, "model": "gpt-5-mini", **event}) + "\n\ndata: [DONE]\n\n",
                     headers={"content-type": "text/event-stream"},
                 ))
                 with self.assertRaises(AIError):
