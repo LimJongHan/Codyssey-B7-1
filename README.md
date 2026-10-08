@@ -8,6 +8,8 @@
 
 DB 세션은 24시간 유효하며 임의 토큰의 해시만 저장한다. 로그인 쿠키는 HttpOnly/SameSite=Lax이며 HTTPS에서는 Secure를 적용한다. 재로그인은 현재 브라우저의 이전 세션을 교체한다.
 
+인증 DB 장애는 일반 안내와 `500`으로 응답하며 실패한 저장·삭제를 성공으로 처리하지 않는다. 인증 응답은 `Cache-Control: no-store`를 사용한다. 입력 오류는 `422`의 `detail` 배열을 유지하면서 원문 입력값을 제외해 비밀번호 반사를 막는다.
+
 ## 실행
 
 Python 3.12와 [uv](https://docs.astral.sh/uv/getting-started/installation/)를 사용한다.

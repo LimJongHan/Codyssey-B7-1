@@ -6,7 +6,7 @@ import secrets
 from datetime import UTC, datetime, timedelta
 
 from app.auth.schemas import User
-from app.db import connect
+from app.auth.storage import connect
 
 SESSION_SECONDS = 24 * 60 * 60
 
