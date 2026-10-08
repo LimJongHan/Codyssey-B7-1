@@ -1,153 +1,151 @@
 /* ==========================================================================
-   마스코트 '해피(Happi)' 인터랙티브 모션 & 스타일
-   SoriAI 풍의 생동감 넘치고 따뜻한 마이크로 애니메이션 시스템
+   마스코트 해피 — 인터랙티브 모션 & 감정 시스템
    ========================================================================== */
 
-.happi-character-wrapper {
+/* ── 래퍼 & 크기 변형 ── */
+.happi {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   user-select: none;
-  transition: transform var(--transition-normal);
+  flex-shrink: 0;
 }
 
-/* 크기 변형 */
-.happi-size-sm {
-  width: 42px;
-  height: 42px;
-}
-.happi-size-md {
-  width: 76px;
-  height: 76px;
-}
-.happi-size-lg {
-  width: 170px;
-  height: 170px;
-}
+.happi--sm  { width: 44px;  height: 44px;  }
+.happi--md  { width: 84px;  height: 84px;  }
+.happi--lg  { width: 190px; height: 190px; }
 
-/* 앰비언트 오라 글로우 (뒤쪽 은은한 빛 펄스) */
-.happi-aura-glow {
+/* ── 앰비언트 오라 ── */
+.happi__aura {
   position: absolute;
-  inset: -12%;
+  inset: -20%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 179, 0, 0.4) 0%, rgba(255, 152, 0, 0.12) 55%, transparent 75%);
-  filter: blur(14px);
-  animation: happi-aura 3.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  background: radial-gradient(circle,
+    rgba(255, 162, 0, 0.38) 0%,
+    rgba(255, 100, 0, 0.14) 48%,
+    transparent 70%);
+  filter: blur(18px);
+  animation: aura-pulse 3.8s ease-in-out infinite;
   pointer-events: none;
   z-index: 0;
 }
 
-.happi-mascot-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-  animation: happi-float 4.2s ease-in-out infinite;
-  transform-origin: center bottom;
+@keyframes aura-pulse {
+  0%, 100% { transform: scale(0.88); opacity: 0.55; }
+  50%       { transform: scale(1.18); opacity: 1.00; }
 }
 
-.happi-svg {
-  width: 100%;
-  height: 100%;
+/* ── SVG 컨테이너 ── */
+.happi__body {
+  position: relative;
+  width: 100%; height: 100%;
+  z-index: 1;
+  animation: float 4.6s ease-in-out infinite;
+  transform-origin: center 60%;
+}
+
+.happi__svg {
+  width: 100%; height: 100%;
   display: block;
   overflow: visible;
 }
 
-/* 1. 플로팅 모션 (부드러운 유영) */
-@keyframes happi-float {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-8px) rotate(1.5deg);
-  }
+/* ── 1. 둥실 유영 ── */
+@keyframes float {
+  0%, 100% { transform: translateY(0)    rotate(0deg); }
+  33%       { transform: translateY(-7px) rotate(1.2deg); }
+  66%       { transform: translateY(-3px) rotate(-0.8deg); }
 }
 
-/* 2. 앰비언트 펄스 오라 모션 */
-@keyframes happi-aura {
-  0%, 100% {
-    transform: scale(0.95);
-    opacity: 0.6;
-  }
-  50% {
-    transform: scale(1.15);
-    opacity: 0.95;
-  }
+/* ── 2. 눈 깜빡임 ── */
+.happi__eyes {
+  transform-origin: 100px 96px;
+  animation: blink 5.5s infinite;
 }
 
-/* 3. 자연스러운 눈 깜빡임 (Blink) */
-.happi-eyes {
-  transform-origin: 80px 78px;
-  animation: happi-blink 4.2s infinite;
+@keyframes blink {
+  0%, 90%, 94%, 100% { transform: scaleY(1); }
+  92%                 { transform: scaleY(0.08); }
 }
 
-@keyframes happi-blink {
-  0%, 94%, 98%, 100% {
-    transform: scaleY(1);
-  }
-  96% {
-    transform: scaleY(0.1);
-  }
+/* ── 3. 안테나 살랑거림 ── */
+.happi__antenna {
+  transform-origin: 100px 16px;
+  animation: antenna-sway 2.8s ease-in-out infinite;
 }
 
-/* 4. 안테나 살랑거림 (Sway) */
-.happi-sprout {
-  transform-origin: 80px 18px;
-  animation: happi-sprout-sway 3.2s ease-in-out infinite;
+@keyframes antenna-sway {
+  0%, 100% { transform: rotate(0deg); }
+  40%       { transform: rotate(9deg); }
+  80%       { transform: rotate(-5deg); }
 }
 
-@keyframes happi-sprout-sway {
-  0%, 100% {
-    transform: rotate(0deg);
-  }
-  50% {
-    transform: rotate(8deg);
-  }
+/* ── 4. 손 콩닥 ── */
+.happi__hands {
+  animation: hands-bob 3.2s ease-in-out infinite;
 }
 
-/* 5. 손 콩닥거림 */
-.happi-hands {
-  animation: happi-hands-bob 2.8s ease-in-out infinite;
+@keyframes hands-bob {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-4px); }
 }
 
-@keyframes happi-hands-bob {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-2px);
-  }
+/* ── 5. 귀 미세 진동 ── */
+.happi__ear--l {
+  transform-origin: 30px 78px;
+  animation: ear-wiggle-l 5.0s ease-in-out infinite;
+}
+.happi__ear--r {
+  transform-origin: 170px 78px;
+  animation: ear-wiggle-r 5.0s ease-in-out infinite;
 }
 
-/* --- 호버 인터랙션 (사용자가 다가왔을 때 설레는 반응) --- */
-.happi-character-wrapper:hover .happi-mascot-container {
-  transform: scale(1.06) rotate(-3deg);
-  transition: transform 0.3s var(--ease-spring);
+@keyframes ear-wiggle-l {
+  0%, 100% { transform: rotate(-18deg); }
+  50%       { transform: rotate(-24deg); }
+}
+@keyframes ear-wiggle-r {
+  0%, 100% { transform: rotate(18deg); }
+  50%       { transform: rotate(24deg); }
 }
 
-.happi-character-wrapper:hover .happi-mouth {
-  d: path("M68 93C72 106 88 106 92 93");
-  fill-opacity: 1;
-  transition: all 0.2s ease;
+/* ── 호버 인터랙션 ── */
+.happi:hover .happi__body {
+  animation: float-hover 0.55s var(--ease-spring) forwards;
 }
 
-.happi-character-wrapper:hover .happi-aura-glow {
-  transform: scale(1.25);
-  opacity: 1;
-  background: radial-gradient(circle, rgba(255, 179, 0, 0.6) 0%, rgba(255, 152, 0, 0.25) 55%, transparent 75%);
+@keyframes float-hover {
+  0%   { transform: scale(1)    rotate(0deg); }
+  40%  { transform: scale(1.10) rotate(-4deg); }
+  100% { transform: scale(1.07) rotate(-2deg); }
 }
 
-/* 감정별 변형 (CSS 클래스) */
-.happi-mood-listening .happi-sprout {
-  animation: happi-sprout-sway 1.5s ease-in-out infinite;
+.happi:hover .happi__aura {
+  background: radial-gradient(circle,
+    rgba(255, 190, 0, 0.55) 0%,
+    rgba(255, 100, 0, 0.22) 50%,
+    transparent 72%);
+  animation: aura-pulse 1.8s ease-in-out infinite;
 }
 
-.happi-mood-cheering .happi-mascot-container {
-  animation: happi-cheer-bounce 1.6s ease-in-out infinite;
+/* ── 감정 변형: listening ── */
+.happi--listening .happi__antenna {
+  animation: antenna-sway 1.2s ease-in-out infinite;
 }
 
-@keyframes happi-cheer-bounce {
+/* ── 감정 변형: cheering ── */
+.happi--cheering .happi__body {
+  animation: cheer-bounce 1.5s ease-in-out infinite;
+}
+
+@keyframes cheer-bounce {
   0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-12px) scale(1.05); }
+  45%       { transform: translateY(-14px) scale(1.06); }
+}
+
+/* ── sm 사이즈에서 오라 크기 축소 ── */
+.happi--sm .happi__aura {
+  inset: -30%;
+  filter: blur(10px);
 }

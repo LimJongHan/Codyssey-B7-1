@@ -1,391 +1,426 @@
 /* ==========================================================================
-   Page 1. 온보딩 및 로그인/회원가입 스타일 (auth.css)
-   토스 감성 미니멀 카드 + SoriAI 풍의 따뜻한 웰컴 패널
+   Page 1 — 로그인 / 회원가입
+   좌: 브랜드 몰입형 + 마스코트 / 우: 컴팩트 인증 카드
    ========================================================================== */
 
-.page-auth-body {
-  background-color: #F7F8FA;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.auth-viewport {
-  width: 100%;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 20px;
-}
-
-.auth-container {
-  width: 100%;
-  max-width: 1020px;
-  min-height: 640px;
-  background: var(--bg-card);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-  display: flex;
+/* ── 전체 레이아웃 ── */
+.auth-page {
+  width: 100vw; height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   overflow: hidden;
-  border: 1px solid rgba(0, 0, 0, 0.04);
+  position: relative;
+}
+
+/* ── 앰비언트 배경 오브젝트 ── */
+.auth-page::before {
+  content: '';
+  position: absolute;
+  width: 700px; height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(255, 162, 0, 0.08) 0%, transparent 68%);
+  top: -200px; left: -100px;
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* ==========================================================================
-   1. 좌측 웰컴 패널 (SoriAI 레퍼런스 스타일)
+   왼쪽 — 브랜드 패널
    ========================================================================== */
-.auth-welcome-panel {
-  flex: 1.1;
-  background: linear-gradient(145deg, #FFF9ED 0%, #FFF3E0 50%, #FFE0B2 100%);
-  padding: 48px 44px;
+.auth-brand {
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(160deg, #12151E 0%, #0D0F16 55%, #0B0D12 100%);
+  border-right: 1px solid var(--border-sub);
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: space-between;
-  position: relative;
+  padding: 48px 44px;
   overflow: hidden;
-  border-right: 1px solid rgba(255, 179, 0, 0.15);
 }
 
-/* 앰비언트 백그라운드 블러 오브젝트 */
-.auth-welcome-panel::before {
+/* 상단 그라디언트 오브젝트 */
+.auth-brand::before {
   content: '';
   position: absolute;
-  width: 320px;
-  height: 320px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 152, 0, 0.2) 0%, transparent 70%);
-  top: -60px;
-  right: -60px;
+  inset: 0;
+  background: var(--grad-radial);
   pointer-events: none;
 }
 
-.welcome-top-tag {
+/* 상단 로고/태그 */
+.brand-top {
   position: relative;
   z-index: 2;
-}
-
-.welcome-character-center {
-  position: relative;
-  z-index: 2;
+  width: 100%;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  text-align: center;
-  margin: 24px 0;
+  gap: 10px;
 }
 
-.character-showcase {
-  margin-bottom: 24px;
-  filter: drop-shadow(0 14px 28px rgba(255, 143, 0, 0.22));
-}
-
-.welcome-speech-bubble {
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  padding: 20px 24px;
-  border-radius: var(--radius-lg);
-  box-shadow: 0 10px 25px rgba(255, 152, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  max-width: 380px;
-}
-
-.bubble-greeting {
-  font-size: 19px;
+.brand-top-name {
+  font-size: 17px;
   font-weight: 800;
-  color: var(--text-primary);
-  margin-bottom: 8px;
+  color: var(--text-hi);
   letter-spacing: -0.02em;
 }
 
-.bubble-greeting strong {
-  color: var(--primary);
+.brand-top-tag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: var(--r-full);
+  background: var(--amber-glow-sm);
+  border: 1px solid var(--border-amber);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--amber-bright);
 }
 
-.bubble-subtext {
-  font-size: 13.5px;
-  color: var(--text-sub);
-  line-height: 1.55;
-  font-weight: 500;
-}
-
-.welcome-feature-cards {
+/* 중앙 마스코트 & 메시지 */
+.brand-center {
   position: relative;
   z-index: 2;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  gap: 28px;
 }
 
-.feature-mini-pill {
+.brand-mascot-wrap {
+  position: relative;
+  filter: drop-shadow(0 20px 40px rgba(255, 140, 0, 0.28));
+}
+
+/* 말풍선 */
+.brand-bubble {
+  background: var(--bg-glass);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--r-xl);
+  padding: 20px 28px;
+  position: relative;
+  max-width: 360px;
+  text-align: center;
+}
+
+/* 말풍선 꼬리 */
+.brand-bubble::before {
+  content: '';
+  position: absolute;
+  top: -10px; left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 10px solid var(--border-glass);
+}
+.brand-bubble::after {
+  content: '';
+  position: absolute;
+  top: -8px; left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-bottom: 9px solid rgba(255,255,255,0.038);
+}
+
+.bubble-greeting {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-hi);
+  letter-spacing: -0.025em;
+  margin-bottom: 6px;
+}
+
+.bubble-greeting em {
+  font-style: normal;
+  color: var(--amber);
+}
+
+.bubble-sub {
+  font-size: 13px;
+  color: var(--text-sec);
+  line-height: 1.55;
+}
+
+/* 하단 특징 필 */
+.brand-features {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  width: 100%;
+}
+
+.feature-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: rgba(255, 255, 255, 0.7);
-  padding: 10px 16px;
-  border-radius: var(--radius-full);
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-sub);
+  border-radius: var(--r-md);
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  color: var(--text-sec);
+  transition: all var(--t-fast);
 }
 
-.pill-icon {
+.feature-row:hover {
+  background: var(--bg-glass-hover);
+  color: var(--text-pri);
+  border-color: var(--border-glass);
+}
+
+.feature-icon {
+  width: 32px; height: 32px;
+  border-radius: var(--r-sm);
+  background: var(--amber-glow-sm);
+  border: 1px solid var(--border-amber);
+  display: flex; align-items: center; justify-content: center;
   font-size: 14px;
+  flex-shrink: 0;
 }
 
 /* ==========================================================================
-   2. 우측 인증 폼 카드 (토스 감성 미니멀리즘)
+   오른쪽 — 인증 카드
    ========================================================================== */
-.auth-form-panel {
-  flex: 1;
-  padding: 48px 44px;
+.auth-form-side {
+  position: relative;
+  z-index: 1;
+  background: var(--bg-layer1);
   display: flex;
-  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  background: var(--bg-card);
+  padding: 48px 44px;
+  overflow-y: auto;
 }
 
-.auth-card-box {
+.auth-card {
   width: 100%;
-  max-width: 380px;
-  margin: 0 auto;
+  max-width: 390px;
 }
 
+/* 카드 헤더 */
 .auth-card-header {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
-.auth-main-title {
+.auth-title {
   font-size: 26px;
   font-weight: 800;
-  color: var(--text-primary);
+  color: var(--text-hi);
   letter-spacing: -0.03em;
   margin-bottom: 6px;
 }
 
-.auth-sub-desc {
-  font-size: 14px;
-  color: var(--text-muted);
-  font-weight: 500;
+.auth-desc {
+  font-size: 13.5px;
+  color: var(--text-sec);
 }
 
-/* 토스 스타일 세그먼트 슬라이딩 탭 스위처 */
-.auth-tab-segment {
+/* 세그먼트 탭 스위처 */
+.auth-tabs {
   position: relative;
   display: flex;
-  background: var(--bg-subtle);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-sub);
+  border-radius: var(--r-md);
   padding: 4px;
-  border-radius: var(--radius-md);
   margin-bottom: 28px;
 }
 
-.tab-segment-btn {
+.auth-tab-btn {
   flex: 1;
-  position: relative;
-  z-index: 2;
+  position: relative; z-index: 2;
   padding: 10px 0;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
-  color: var(--text-muted);
+  color: var(--text-dim);
   text-align: center;
-  border-radius: var(--radius-sm);
-  transition: color 0.2s ease;
+  border-radius: var(--r-sm);
+  transition: color var(--t-fast);
 }
 
-.tab-segment-btn.active {
-  color: var(--text-primary);
+.auth-tab-btn.is-active {
+  color: var(--text-hi);
 }
 
-.tab-slider-pill {
+.tab-track {
   position: absolute;
-  top: 4px;
-  left: 4px;
+  top: 4px; left: 4px;
   width: calc(50% - 4px);
   height: calc(100% - 8px);
-  background: var(--bg-card);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-sm);
+  background: var(--bg-layer3);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-xs);
   transition: transform 0.28s var(--ease-spring);
   z-index: 1;
 }
 
-.auth-tab-segment.register-active .tab-slider-pill {
+.auth-tabs.tab--register .tab-track {
   transform: translateX(100%);
 }
 
-/* 폼 요소 스타일 */
-.auth-interactive-form {
+/* 인풋 그룹 */
+.auth-form {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
 }
 
-.form-group {
+.field-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.form-label {
-  font-size: 13px;
+.field-label {
+  font-size: 12.5px;
   font-weight: 700;
-  color: var(--text-secondary);
+  color: var(--text-sec);
+  letter-spacing: 0.01em;
 }
 
-.input-wrapper {
+.field-wrap {
   position: relative;
   display: flex;
   align-items: center;
 }
 
-.form-input {
+.field-icon {
+  position: absolute;
+  left: 14px;
+  font-size: 15px;
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+.field-input {
   width: 100%;
   height: 50px;
   padding: 0 16px 0 44px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-light);
-  font-size: 14.5px;
+  border-radius: var(--r-md);
+  border: 1.5px solid var(--border-sub);
+  background: var(--bg-input);
+  color: var(--text-hi);
+  font-size: 14px;
   font-weight: 500;
-  color: var(--text-primary);
-  background-color: #FAFAFB;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
 }
 
-.form-input:focus {
-  background-color: var(--bg-card);
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-glow);
+.field-input:hover:not(:focus) {
+  border-color: var(--border-glass);
+  background: rgba(255,255,255,0.07);
 }
 
-.input-icon {
-  position: absolute;
-  left: 14px;
-  font-size: 16px;
-  pointer-events: none;
+.field-input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--amber-glow-sm);
+  background: rgba(255,255,255,0.07);
 }
 
-.btn-toggle-pw {
+.btn-pw-toggle {
   position: absolute;
   right: 12px;
-  color: var(--text-disabled);
   padding: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
+  color: var(--text-dim);
+  border-radius: var(--r-xs);
+  display: flex; align-items: center;
 }
+.btn-pw-toggle:hover { color: var(--text-sec); }
 
-.btn-toggle-pw:hover {
-  color: var(--text-secondary);
-}
-
-/* Toss Bold Primary Submit Button */
-.btn-auth-submit {
+/* 제출 버튼 */
+.btn-submit {
   margin-top: 8px;
   height: 52px;
-  border-radius: var(--radius-md);
-  background: var(--grad-primary);
-  color: #FFFFFF;
-  font-size: 15.5px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  box-shadow: var(--shadow-primary);
+  border-radius: var(--r-md);
+  background: var(--grad-amber);
+  color: #0B0D12;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: var(--shadow-amber);
+  transition: filter var(--t-fast), transform var(--t-fast), box-shadow var(--t-fast);
+  border: none; cursor: pointer; width: 100%;
 }
 
-.btn-auth-submit:hover {
-  filter: brightness(1.04);
-  transform: translateY(-1px);
+.btn-submit:hover {
+  filter: brightness(1.06);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-amber-lg);
 }
 
-.btn-auth-submit:active {
+.btn-submit:active {
   transform: translateY(0) scale(0.98);
+  box-shadow: var(--shadow-amber);
 }
 
 /* 구분선 */
 .auth-divider {
   position: relative;
   text-align: center;
-  margin: 24px 0 16px;
+  margin: 20px 0 16px;
 }
 
 .auth-divider::before {
   content: '';
   position: absolute;
-  left: 0;
-  top: 50%;
-  width: 100%;
-  height: 1px;
-  background-color: var(--border-light);
+  left: 0; top: 50%;
+  width: 100%; height: 1px;
+  background: var(--border-sub);
 }
 
 .auth-divider span {
   position: relative;
-  background-color: var(--bg-card);
+  background: var(--bg-layer1);
   padding: 0 12px;
-  font-size: 12.5px;
-  color: var(--text-disabled);
+  font-size: 12px;
+  color: var(--text-dim);
   font-weight: 500;
 }
 
-/* 게스트 모드 진입 링크 버튼 */
-.guest-explore-area {
-  text-align: center;
-}
-
-.btn-guest-explore {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 48px;
-  border-radius: var(--radius-md);
-  background: var(--bg-subtle);
-  color: var(--text-secondary);
-  font-size: 14px;
+/* 게스트 버튼 */
+.btn-guest {
+  width: 100%;
+  height: 46px;
+  border-radius: var(--r-md);
+  border: 1.5px solid var(--border-sub);
+  background: transparent;
+  color: var(--text-sec);
+  font-size: 13.5px;
   font-weight: 700;
-  transition: all var(--transition-fast);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: all var(--t-fast);
+  cursor: pointer;
 }
 
-.btn-guest-explore:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+.btn-guest:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--border-glass);
+  color: var(--text-pri);
 }
 
 .guest-note {
   margin-top: 10px;
   font-size: 11.5px;
-  color: var(--text-muted);
+  color: var(--text-dim);
+  text-align: center;
   line-height: 1.4;
 }
 
-/* ==========================================================================
-   반응형 브레이크포인트
-   ========================================================================== */
-@media (max-width: 900px) {
-  .auth-container {
-    flex-direction: column;
-    max-width: 480px;
-  }
-  .auth-welcome-panel {
-    padding: 32px 24px;
-    border-right: none;
-    border-bottom: 1px solid rgba(255, 179, 0, 0.15);
-  }
-  .welcome-character-center {
-    margin: 16px 0;
-  }
-  .happi-size-lg {
-    width: 120px;
-    height: 120px;
-  }
-  .welcome-feature-cards {
-    display: none;
-  }
-  .auth-form-panel {
-    padding: 36px 24px;
-  }
+/* ── 반응형 ── */
+@media (max-width: 860px) {
+  .auth-page { grid-template-columns: 1fr; }
+  .auth-brand { display: none; }
+  .auth-form-side { background: var(--bg-base); }
 }
