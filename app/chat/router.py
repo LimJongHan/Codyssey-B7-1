@@ -1,9 +1,11 @@
+import asyncio
 import logging
 import sqlite3
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from app.ai.service import AIError, Message, generate_reply
 from app.auth.dependencies import get_current_user
 from app.auth.schemas import User
 from app.chat.schemas import ChatRequest, Exchange, Room, RoomCreate
@@ -12,6 +14,7 @@ from app.db import connect
 router = APIRouter(prefix="/api/rooms", tags=["chat"])
 CurrentUser = Annotated[User, Depends(get_current_user)]
 logger = logging.getLogger(__name__)
+CONTEXT_EXCHANGES = 5  # AI 문맥으로 보낼 최근 완료 Q/A 수
 
 
 def _ensure_own_room(db, room_id: int, user_id: int):
@@ -19,6 +22,32 @@ def _ensure_own_room(db, room_id: int, user_id: int):
     room = db.execute("SELECT 1 FROM rooms WHERE id = ? AND user_id = ?", (room_id, user_id)).fetchone()
     if room is None:
         raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다.")
+
+
+def _load_context(room_id: int, user_id: int, question: str) -> list[Message]:
+    # 최근 완료 Q/A를 시간순으로 펼치고 새 질문을 마지막에 붙인다.
+    with connect() as db:
+        _ensure_own_room(db, room_id, user_id)
+        recent = db.execute(
+            "SELECT question, answer FROM exchanges WHERE room_id = ? ORDER BY id DESC LIMIT ?",
+            (room_id, CONTEXT_EXCHANGES),
+        ).fetchall()
+    messages: list[Message] = []
+    for exchange in reversed(recent):
+        messages.append({"role": "user", "content": exchange["question"]})
+        messages.append({"role": "assistant", "content": exchange["answer"]})
+    messages.append({"role": "user", "content": question})
+    return messages
+
+
+def _save_exchange(room_id: int, question: str, answer: str) -> dict:
+    with connect() as db:
+        exchange = db.execute(
+            "INSERT INTO exchanges (room_id, question, answer) VALUES (?, ?, ?)"
+            " RETURNING id, room_id, question, answer, created_at",
+            (room_id, question, answer),
+        ).fetchone()
+    return dict(exchange)
 
 
 @router.post("", response_model=Room, status_code=201)
@@ -62,6 +91,19 @@ def list_messages(room_id: int, user: CurrentUser):
 
 @router.post("/{room_id}/messages", response_model=Exchange, status_code=201)
 async def send_message(room_id: int, body: ChatRequest, user: CurrentUser):
-    # TODO: 소유권 확인 → 최근 5개 Q/A + 새 질문 → ai.service.generate_reply
-    # → 성공한 Q/A를 함께 저장 → Exchange 반환. AI 대기 중 DB 연결은 닫는다.
-    raise HTTPException(status_code=501, detail="대화 전송 구현 예정입니다.")
+    # 소유권 확인 → 최근 Q/A + 새 질문 → AI 응답 → 성공한 Q/A만 저장.
+    # DB 작업은 스레드에서 실행하고, AI를 기다리는 동안 DB 연결을 열어두지 않는다.
+    logger.info("request_received user_id=%s room_id=%s", user.id, room_id)
+    messages = await asyncio.to_thread(_load_context, room_id, user.id, body.question)
+    try:
+        answer = await generate_reply(messages)
+    except AIError as error:
+        logger.warning("chat_ai_failure user_id=%s room_id=%s status=%s", user.id, room_id, error.status_code)
+        raise
+    try:
+        exchange = await asyncio.to_thread(_save_exchange, room_id, body.question, answer)
+    except sqlite3.Error:
+        logger.exception("db_save_failure user_id=%s room_id=%s", user.id, room_id)
+        raise HTTPException(status_code=500, detail="대화를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.")
+    logger.info("db_save_success user_id=%s room_id=%s exchange_id=%s", user.id, room_id, exchange["id"])
+    return exchange
