@@ -6,7 +6,7 @@ from unittest.mock import patch
 import httpx2
 from openai import AsyncOpenAI
 
-from app.ai.service import AIError, SYSTEM_PROMPT, generate_reply
+from app.ai.service import AIError, SYSTEM_PROMPT, generate_reply, stream_reply
 
 
 class AITests(unittest.IsolatedAsyncioTestCase):
@@ -134,3 +134,39 @@ class AITests(unittest.IsolatedAsyncioTestCase):
                         await generate_reply(self.messages)
                     self.assertEqual(error.exception.status_code, 503)
                     client.assert_not_called()
+
+    async def test_stream_delivers_chunks_and_preserves_context(self):
+        messages = [{"role": "user", "content": str(i)} for i in range(25)]
+        def handler(request):
+            body = json.loads(request.content)
+            self.assertTrue(body["stream"])
+            self.assertEqual(body["messages"][1:], messages[-20:])
+            events = [
+                {"choices": [{"delta": {"content": "힘내"}, "finish_reason": None}]},
+                {"choices": [{"delta": {"content": "세요!"}, "finish_reason": None}]},
+                {"choices": [{"delta": {}, "finish_reason": "stop"}]},
+            ]
+            data = "".join("data: " + json.dumps(event) + "\n\n" for event in events)
+            return httpx2.Response(200, text=data + "data: [DONE]\n\n",
+                                  headers={"content-type": "text/event-stream"})
+        self.mock_api(handler)
+        self.assertEqual([text async for text in stream_reply(messages)], ["힘내", "세요!"])
+
+    async def test_stream_requires_complete_nonempty_response(self):
+        for content, reason in [("부분 답변", None), ("부분 답변", "length"), ("", "stop")]:
+            with self.subTest(reason=reason):
+                event = {"choices": [{"delta": {"content": content}, "finish_reason": reason}]}
+                self.mock_api(lambda request: httpx2.Response(
+                    200, text="data: " + json.dumps(event) + "\n\ndata: [DONE]\n\n",
+                    headers={"content-type": "text/event-stream"},
+                ))
+                with self.assertRaises(AIError):
+                    _ = [text async for text in stream_reply(self.messages)]
+
+    async def test_stream_timeout_is_reported(self):
+        def handler(request):
+            raise httpx2.ReadTimeout("secret", request=request)
+        self.mock_api(handler)
+        with self.assertRaises(AIError) as error:
+            _ = [text async for text in stream_reply(self.messages)]
+        self.assertEqual(error.exception.status_code, 504)
