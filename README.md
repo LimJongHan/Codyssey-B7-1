@@ -2,7 +2,13 @@
 
 일상의 고민을 이야기하고 공감과 격려를 받는 웹 AI 챗봇이다. 사용자는 로그인 후 채팅방을 만들고 대화를 이어가며 이전 대화를 다시 확인한다.
 
-현재는 **4인 개발용 초기 템플릿**이다. FastAPI 실행, 시작 화면, API 계약, 입력 검증, 로컬 SQLite 초기화가 준비되어 있다. Codyssey OpenAI 호환 Chat Completions API 호출은 구현되어 있으며, 채팅방 SSE 전송과 완료된 대화 저장이 구현되어 있다. 회원가입·로그인·방 생성/목록·내역 조회·일반 JSON 전송은 아직 미구현이다. 미구현 API는 `501`, 인증이 필요한 API는 `401`을 반환한다.
+현재는 **인증과 AI·SSE 채팅이 구현된 4인 개발용 프로젝트**다. 회원가입·로그인·현재 사용자 조회·로그아웃과 보호 API 인증 검사가 동작한다. Codyssey API를 통한 AI 응답, 채팅방 SSE 전송과 완료된 대화 저장이 구현되어 있다. 화면 연결·방 생성/목록·내역 조회·일반 JSON 전송은 아직 미구현이다. 미구현 API는 `501`, 비로그인 요청은 `401`을 반환한다.
+
+인증 내부의 비밀번호 해시·검증은 `argon2-cffi`의 Argon2id로 구현되어 있다. AI 호출에는 OpenAI SDK, SSE 응답에는 FastAPI 0.135 이상을 사용한다.
+
+DB 세션은 24시간 유효하며 임의 토큰의 해시만 저장한다. 로그인 쿠키는 HttpOnly/SameSite=Lax이며 HTTPS에서는 Secure를 적용한다. 재로그인은 현재 브라우저의 이전 세션을 교체한다.
+
+인증 DB 장애는 일반 안내와 `500`으로 응답하며 실패한 저장·삭제를 성공으로 처리하지 않는다. 인증 응답은 `Cache-Control: no-store`를 사용한다. 입력 오류는 `422`의 `detail` 배열을 유지하면서 원문 입력값을 제외해 비밀번호 반사를 막는다.
 
 ## 실행
 
@@ -28,9 +34,9 @@ uv run --env-file .env uvicorn app.main:app --reload
 | `AI_MODEL` | AI 모델 이름, 비어 있으면 `gpt-5-mini` | 사용 |
 | `AI_TIMEOUT_SECONDS` | AI 요청 제한 시간, 기본 30초 | 사용 |
 
-`AI_API_KEY`에 Codyssey 발급 API 키를 설정한다. 호출 주소는 `https://copa.codyssey.kr/v1/chat/completions`이며, `AI_MODEL=gpt-5-mini`를 사용한다. [Codyssey API 문서](https://usr.codyssey.kr/public-api-console)를 기준으로 연결한다. AI 함수는 새 질문을 포함한 최신 메시지 최대 20개를 순서대로 보내며(시스템 프롬프트 별도), 공감 프롬프트·자동 재시도 없는 타임아웃·호출 성공/실패 로그를 적용한다. 자동 테스트는 외부 API를 대체하므로 비용이 발생하지 않는다. 2026-10-08 기준 자동 테스트 22개 통과 및 `gpt-5-mini` 실제 응답 수신을 확인했다.
+`AI_API_KEY`에 Codyssey 발급 API 키를 설정한다. 호출 주소는 `https://copa.codyssey.kr/v1/chat/completions`이며, `AI_MODEL=gpt-5-mini`를 사용한다. [Codyssey API 문서](https://usr.codyssey.kr/public-api-console)를 기준으로 연결한다. AI 함수는 새 질문을 포함한 최신 메시지 최대 20개를 순서대로 보내며(시스템 프롬프트 별도), 공감 프롬프트·자동 재시도 없는 타임아웃·호출 성공/실패 로그를 적용한다. 자동 테스트는 외부 API를 대체하므로 비용이 발생하지 않는다. 2026-10-08 기준 자동 테스트 68개 통과 및 `gpt-5-mini` 실제 응답 수신을 확인했다.
 
-`.env`와 DB 파일은 Git에서 제외한다. 인증 구현에 추가 설정이 필요하면 `.env.example`에 이름과 빈 값만 추가한다.
+`.env`와 DB 파일은 Git에서 제외한다. 인증은 기존 `DATABASE_PATH`를 사용하며 별도 비밀 키나 추가 환경 변수가 필요하지 않다. 세션 수명은 24시간이다. 이후 인증 설정을 추가한다면 통합 담당과 `.env.example`에 반영한다.
 
 ## 구조와 담당
 
@@ -50,9 +56,13 @@ uv run --env-file .env uvicorn app.main:app --reload
 
 `app/main.py`, `pyproject.toml`, `uv.lock`, `.env.example`은 통합 담당 1명을 정해 변경을 모은다. 상세 연결 규칙과 브랜치 운영은 [협업 계약](docs/CONTRIBUTING.md)에 있다. 팀원 이름과 개인별 실제 작업 요약은 각 담당 PR에서 위 표를 갱신한다.
 
+인증 작업 작성자: **하루이(Git 표시명)**. 회원가입·Argon2id 비밀번호 검증·24시간 DB 세션·로그인·현재 사용자 확인·로그아웃·인증 실패와 저장소 장애 처리를 구현했다. 인증 테스트와 기존 템플릿 회귀 검증, 인증 사용법 문서를 작성했다. 인증 전용 의존성 `argon2-cffi` 및 잠금 파일 변경은 통합 시 함께 반영한다.
+
 ## API 계약
 
-아래는 API 계약이다. SSE 전송은 구현되어 있고, 나머지 기능의 성공 예시는 구현 목표다. `/docs`의 스키마와 아래 계약을 기준으로 각 영역을 구현한다. 인증은 동일 출처의 `session` 쿠키를 사용한다.
+인증 정책과 담당 연결·완료 기준은 [인증 기능명세](docs/auth.md)를 참고한다.
+
+인증 API 4개와 SSE 전송은 구현되어 있다. 나머지 채팅 API의 성공 예시는 구현 목표다. 사용자 ID는 실제 DB에 따라 달라진다. `/docs`의 스키마와 아래 계약을 기준으로 각 영역을 구현한다. 인증은 동일 출처의 `session` 쿠키를 사용한다. 실제 인증 실행 명령은 [인증 사용 예시](docs/auth.md#실제-api-사용-예시)에 있다.
 
 | 메서드·경로 | JSON 입력 | 성공 응답 |
 | --- | --- | --- |
@@ -70,13 +80,13 @@ uv run --env-file .env uvicorn app.main:app --reload
 
 `Exchange`: `{"id":1,"room_id":1,"question":"오늘 많이 지쳤어","answer":"많이 힘든 하루였겠어요.","created_at":"2026-10-08T06:01:00Z"}`
 
-오류는 `{"detail":"안내 문구"}`를 사용한다. `401` 인증 실패, `404` 방 없음/다른 사람 소유, `409` 아이디 중복, `502` AI 실패, `504` AI 타임아웃, `500` DB 저장 실패로 맞춘다. 입력 오류 `422`는 FastAPI 기본 검증 응답(`detail` 배열)을 그대로 사용하므로 화면에서 별도로 안내한다. 질문은 공백 제거 후 1~2,000자, 방 제목은 1~100자로 제한한다.
+오류는 `{"detail":"안내 문구"}`를 사용한다. `401` 인증 실패, `409` 아이디 중복, `500` 인증 저장소/해시 처리 실패가 구현되어 있다. 채팅의 `404` 방 없음/다른 사람 소유, `502` AI 실패, `504` AI 타임아웃, `500` DB 저장 실패는 구현 목표다. 입력 오류 `422`는 `detail` 배열을 사용하므로 화면에서 별도로 안내한다. 인증에서는 원문 `input`/`ctx`를 제외한다. 질문은 공백 제거 후 1~2,000자, 방 제목은 1~100자로 제한한다.
 
 ## SSE 채팅
 
 AI 스트림은 OpenAI SDK의 `chat.completions.stream()`과 `content.delta` 이벤트를 사용하고, 최종 응답은 SDK가 누적한다. FastAPI의 `EventSourceResponse`와 `ServerSentEvent`를 사용한다. SSE 직렬화·응답 헤더·keep-alive는 프레임워크가 처리한다. 이벤트 데이터는 Pydantic 모델로 직렬화해 한글을 그대로 전송한다.
 
-`POST /api/rooms/{room_id}/messages/stream`에 `{"question":"오늘 힘들었어"}`를 보낸다. 로그인과 본인 소유의 기존 채팅방이 필요하다. 인증이 미구현인 현재 상태에서는 `401`이며, 자동 테스트에서만 인증 결과를 대체한다.
+`POST /api/rooms/{room_id}/messages/stream`에 `{"question":"오늘 힘들었어"}`를 보낸다. 로그인과 본인 소유의 기존 채팅방이 필요하다. 로그인하지 않으면 `401`을 반환한다. 방 생성 API는 아직 미구현이므로 기존 채팅방이 필요하다.
 
 - `delta`: `{"text":"응답 조각"}` — 화면에 이어 붙인다.
 - `done`: 저장된 `Exchange` — **DB 커밋 성공 후** 전송한다.
@@ -97,10 +107,12 @@ AI 스트림은 OpenAI SDK의 `chat.completions.stream()`과 `content.delta` 이
 
 `users → rooms → exchanges`로 사용자별 질문·응답·생성 시각을 추적한다. 생성 시각은 UTC다. 한 행에 질문과 답변을 함께 저장한다. 별도의 ORM이나 마이그레이션 프레임워크는 사용하지 않는다.
 
-SQLite CLI가 설치되어 있으면 기본 DB를 다음처럼 확인할 수 있다. SSE 요청이 정상 완료되면 `exchanges`에 질문과 답변이 함께 저장된다. 대화를 전송하지 않은 DB는 비어 있다.
+SQLite CLI가 설치되어 있으면 기본 DB를 다음처럼 확인할 수 있다. 회원가입·로그인 시 users/sessions가 저장되고, SSE 요청이 정상 완료되면 exchanges에 질문과 답변이 함께 저장된다.
 
 ```sh
 sqlite3 .data/positive-bot.db '.tables'
+sqlite3 -header -column .data/positive-bot.db 'SELECT id, username, created_at FROM users;'
+sqlite3 -header -column .data/positive-bot.db 'SELECT user_id, expires_at FROM sessions;'
 sqlite3 -header -column .data/positive-bot.db 'SELECT r.user_id, e.* FROM exchanges e JOIN rooms r ON r.id = e.room_id ORDER BY e.id DESC LIMIT 10;'
 ```
 
@@ -112,8 +124,10 @@ sqlite3 -header -column .data/positive-bot.db 'SELECT r.user_id, e.* FROM exchan
 
 ## 제출 전 확인
 
+인증 검증: Python 3.12에서 **전체 52개 테스트(인증 46개 + 기존 기반 6개)** 통과. HTTPS 쿠키, 만료 경계, 새로운 Python 프로세스에서의 세션 유지, 동시 중복 가입, DB 장애 롤백과 사용자별 인증 구분을 확인했다. 실행 명령은 `uv run python -m unittest discover -s tests -v`다. 이 결과는 화면·채팅 구현이나 실제 배포 검증까지 완료됐다는 뜻은 아니다.
+
 - [ ] 로그인한 사용자만 질문 가능, 다른 사용자의 방·내역 접근 불가
-- [ ] 실제 AI API 호출과 최근 5개 Q/A 문맥 유지
+- [ ] 실제 AI API 호출과 최신 20개 메시지 문맥 유지
 - [ ] 질문·응답·사용자·생성 시각 누적 저장 및 조회
 - [ ] 요청 수신 / AI 호출·성공·실패 / DB 저장 성공·실패 로그
 - [ ] 빈 입력·길이 초과, AI 실패·타임아웃, DB 실패 처리
