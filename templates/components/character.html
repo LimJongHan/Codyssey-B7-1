@@ -1,0 +1,80 @@
+{# ==========================================================================
+   컴포넌트: 긍정 마스코트 캐릭터 '해피(Happi)'
+   인터랙티브 SVG + 다채로운 감정 상태 및 생동감 넘치는 모션 지원
+   파라미터:
+   - size: 'sm' (헤더/채팅 말풍선용 40px), 'md' (프로필용 72px), 'lg' (온보딩/웰컴용 160px)
+   - mood: 'cheerful' (기본 활기참), 'listening' (경청 모드), 'cheering' (응원 모드)
+   ========================================================================== #}
+
+<div class="happi-character-wrapper happi-size-{{ size|default('md') }} happi-mood-{{ mood|default('cheerful') }}" data-happi-character>
+  <!-- 후광 앰비언트 펄스 오라 -->
+  <div class="happi-aura-glow"></div>
+  
+  <!-- 마스코트 메인 바디 -->
+  <div class="happi-mascot-container">
+    <svg class="happi-svg" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- 부드러운 긍정 에너지 그라디언트 -->
+        <linearGradient id="happiBodyGrad" x1="20" y1="20" x2="140" y2="150" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#FFE082" />
+          <stop offset="45%" stop-color="#FFB300" />
+          <stop offset="100%" stop-color="#FF8F00" />
+        </linearGradient>
+
+        <!-- 빛 반사 하이라이트 -->
+        <linearGradient id="happiHighlightGrad" x1="40" y1="25" x2="70" y2="60" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.85" />
+          <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+        </linearGradient>
+
+        <!-- 그림자 필터 -->
+        <filter id="happiDropShadow" x="-10%" y="-10%" width="130%" height="130%">
+          <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#FF6F00" flood-opacity="0.25" />
+        </filter>
+      </defs>
+
+      <!-- 1. 캐릭터 몸체 (부드럽고 둥글린 유기적 라운드) -->
+      <g filter="url(#happiDropShadow)">
+        <path class="happi-body" d="M80 18C44 18 20 45 20 84C20 120 46 142 80 142C114 142 140 120 140 84C140 45 116 18 80 18Z" fill="url(#happiBodyGrad)" />
+      </g>
+
+      <!-- 2. 몸체 상단 빛 반사 캡 (글래시 텍스처) -->
+      <ellipse class="happi-highlight" cx="62" cy="42" rx="30" ry="16" transform="rotate(-18 62 42)" fill="url(#happiHighlightGrad)" />
+
+      <!-- 3. 귀여운 새싹/빛 안테나 (긍정 에너지를 수신하는 포인트) -->
+      <g class="happi-sprout">
+        <path d="M80 18C80 8 86 3 93 6C100 9 96 18 84 19" stroke="#FFD54F" stroke-width="4.5" stroke-linecap="round" fill="none" />
+        <circle cx="94" cy="5" r="4.5" fill="#FFE57F" />
+      </g>
+
+      <!-- 4. 볼터치 (Blush) -->
+      <ellipse class="happi-blush left" cx="42" cy="95" rx="10" ry="6" fill="#FF5252" fill-opacity="0.32" />
+      <ellipse class="happi-blush right" cx="118" cy="95" rx="10" ry="6" fill="#FF5252" fill-opacity="0.32" />
+
+      <!-- 5. 눈 (Eyes) - 동적 애니메이션 타겟 -->
+      <g class="happi-eyes">
+        <!-- 왼쪽 눈 -->
+        <g class="happi-eye left">
+          <ellipse cx="54" cy="78" rx="8" ry="10" fill="#263238" />
+          <circle cx="51.5" cy="74.5" r="3.2" fill="#FFFFFF" />
+          <circle cx="56.5" cy="81.5" r="1.5" fill="#FFFFFF" />
+        </g>
+        <!-- 오른쪽 눈 -->
+        <g class="happi-eye right">
+          <ellipse cx="106" cy="78" rx="8" ry="10" fill="#263238" />
+          <circle cx="103.5" cy="74.5" r="3.2" fill="#FFFFFF" />
+          <circle cx="108.5" cy="81.5" r="1.5" fill="#FFFFFF" />
+        </g>
+      </g>
+
+      <!-- 6. 행복한 미소 입 (Mouth) -->
+      <path class="happi-mouth" d="M70 94C73 103 87 103 90 94" stroke="#263238" stroke-width="4.5" stroke-linecap="round" fill="#FF5252" fill-opacity="0.8" />
+
+      <!-- 7. 귀여운 양손 (작은 조약돌 같은 포즈) -->
+      <g class="happi-hands">
+        <ellipse class="happi-hand left" cx="30" cy="104" rx="7" ry="6" fill="#FFB300" />
+        <ellipse class="happi-hand right" cx="130" cy="104" rx="7" ry="6" fill="#FFB300" />
+      </g>
+    </svg>
+  </div>
+</div>

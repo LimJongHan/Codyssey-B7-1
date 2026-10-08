@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>{% block title %}해피(Happi) - 매일 만나는 AI 긍정 메이트{% endblock %}</title>
+  
+  <!-- SEO 및 메타 태그 -->
+  <meta name="description" content="지친 일상에 온기를 더하는 AI 긍정 메이트 해피(Happi). 오늘 하루 당신의 편이 되어 따뜻한 위로와 긍정 확언을 전합니다.">
+  <meta property="og:title" content="해피(Happi) - AI 긍정 메이트">
+  <meta property="og:description" content="매일 만나는 나만의 긍정 AI 친구">
+  
+  <!-- Favicon SVG -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀️</text></svg>">
+  
+  <!-- Pretendard 웹폰트 및 시스템 CSS 토큰 -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/character.css') }}">
+  
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+  {% block content %}{% endblock %}
+
+  <!-- 공통 스크립트 블록 -->
+  {% block scripts %}{% endblock %}
+</body>
+</html>
