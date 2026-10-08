@@ -1,17 +1,31 @@
+import sqlite3
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 
 from app.auth.dependencies import get_current_user
+from app.auth.passwords import hash_password
 from app.auth.schemas import Credentials, User
+from app.db import connect
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/signup", response_model=User, status_code=201)
 def signup(body: Credentials):
-    # TODO: 비밀번호 해시 저장. 중복 username은 409. 가입 후 별도 로그인.
-    raise HTTPException(status_code=501, detail="회원가입 구현 예정입니다.")
+    password_hash = hash_password(body.password)
+    try:
+        with connect() as db:
+            cursor = db.execute(
+                "INSERT INTO users (username, password_hash) VALUES (?, ?)",
+                (body.username, password_hash),
+            )
+            user_id = cursor.lastrowid
+    except sqlite3.IntegrityError as error:
+        if error.sqlite_errorname == "SQLITE_CONSTRAINT_UNIQUE":
+            raise HTTPException(status_code=409, detail="이미 사용 중인 아이디입니다.") from None
+        raise
+    return User(id=user_id, username=body.username)
 
 
 @router.post("/login", response_model=User)
