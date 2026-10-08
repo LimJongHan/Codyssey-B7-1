@@ -34,7 +34,7 @@ uv run --env-file .env uvicorn app.main:app --reload
 | `AI_MODEL` | AI 모델 이름 | AI 담당 구현 예정 |
 | `AI_TIMEOUT_SECONDS` | AI 요청 제한 시간, 기본 계획 30초 | AI 담당 구현 예정 |
 
-`.env`와 DB 파일은 Git에서 제외한다. 인증 구현에 추가 설정이 필요하면 `.env.example`에 이름과 빈 값만 추가한다.
+`.env`와 DB 파일은 Git에서 제외한다. 인증은 기존 `DATABASE_PATH`를 사용하며 별도 비밀 키나 추가 환경 변수가 필요하지 않다. 세션 수명은 24시간이다. 이후 인증 설정을 추가한다면 통합 담당과 `.env.example`에 반영한다.
 
 ## 구조와 담당
 
@@ -54,11 +54,13 @@ uv run --env-file .env uvicorn app.main:app --reload
 
 `app/main.py`, `pyproject.toml`, `uv.lock`, `.env.example`은 통합 담당 1명을 정해 변경을 모은다. 상세 연결 규칙과 브랜치 운영은 [협업 계약](docs/CONTRIBUTING.md)에 있다. 팀원 이름과 개인별 실제 작업 요약은 각 담당 PR에서 위 표를 갱신한다.
 
+인증 작업 작성자: **하루이(Git 표시명)**. 회원가입·Argon2id 비밀번호 검증·24시간 DB 세션·로그인·현재 사용자 확인·로그아웃·인증 실패와 저장소 장애 처리를 구현했다. 인증 테스트와 기존 템플릿 회귀 검증, 인증 사용법 문서를 작성했다. 인증 전용 의존성 `argon2-cffi` 및 잠금 파일 변경은 통합 시 함께 반영한다.
+
 ## API 계약
 
 인증 정책과 담당 연결·완료 기준은 [인증 기능명세](docs/auth.md)를 참고한다.
 
-아래는 **구현 목표**이며, 성공 예시는 아직 실제 서비스 응답이 아니다. `/docs`의 스키마와 아래 계약을 기준으로 각 영역을 구현한다. 인증은 동일 출처의 `session` 쿠키를 사용한다.
+아래 인증 API 4개는 구현·검증되었으며 사용자 ID는 실제 DB에 따라 달라진다. 채팅 API 4개와 Room/Exchange 예시는 **아직 구현 목표**다. 인증은 동일 출처의 `session` 쿠키를 사용한다. 실제 가입·로그인·조회·로그아웃 실행 명령은 [인증 사용 예시](docs/auth.md#실제-api-사용-예시)에 있다.
 
 | 메서드·경로 | JSON 입력 | 성공 응답 |
 | --- | --- | --- |
@@ -75,7 +77,7 @@ uv run --env-file .env uvicorn app.main:app --reload
 
 `Exchange`: `{"id":1,"room_id":1,"question":"오늘 많이 지쳤어","answer":"많이 힘든 하루였겠어요.","created_at":"2026-10-08T06:01:00Z"}`
 
-오류는 `{"detail":"안내 문구"}`를 사용한다. `401` 인증 실패, `404` 방 없음/다른 사람 소유, `409` 아이디 중복, `502` AI 실패, `504` AI 타임아웃, `500` DB 저장 실패로 맞춘다. 입력 오류 `422`는 FastAPI 기본 검증 응답(`detail` 배열)을 그대로 사용하므로 화면에서 별도로 안내한다. 질문은 공백 제거 후 1~2,000자, 방 제목은 1~100자로 제한한다.
+오류는 `{"detail":"안내 문구"}`를 사용한다. `401` 인증 실패, `409` 아이디 중복, `500` 인증 저장소/해시 처리 실패가 구현되어 있다. 채팅의 `404` 방 없음/다른 사람 소유, `502` AI 실패, `504` AI 타임아웃, `500` DB 저장 실패는 구현 목표다. 입력 오류 `422`는 `detail` 배열을 사용하므로 화면에서 별도로 안내한다. 인증에서는 원문 `input`/`ctx`를 제외한다. 질문은 공백 제거 후 1~2,000자, 방 제목은 1~100자로 제한한다.
 
 ## DB 구조와 확인
 
@@ -88,10 +90,12 @@ uv run --env-file .env uvicorn app.main:app --reload
 
 `users → rooms → exchanges`로 사용자별 질문·응답·생성 시각을 추적한다. 생성 시각은 UTC다. 한 행에 질문과 답변을 함께 저장한다. 별도의 ORM이나 마이그레이션 프레임워크는 사용하지 않는다.
 
-SQLite CLI가 설치되어 있으면 기본 DB를 다음처럼 확인할 수 있다. 현재 템플릿은 테이블만 생성하므로 대화 조회 결과는 비어 있다.
+SQLite CLI가 설치되어 있으면 기본 DB를 다음처럼 확인할 수 있다. 회원가입·로그인 시 users/sessions가 저장된다. 채팅 저장은 아직 미구현이므로 대화 조회 결과는 비어 있다.
 
 ```sh
 sqlite3 .data/positive-bot.db '.tables'
+sqlite3 -header -column .data/positive-bot.db 'SELECT id, username, created_at FROM users;'
+sqlite3 -header -column .data/positive-bot.db 'SELECT user_id, expires_at FROM sessions;'
 sqlite3 -header -column .data/positive-bot.db 'SELECT r.user_id, e.* FROM exchanges e JOIN rooms r ON r.id = e.room_id ORDER BY e.id DESC LIMIT 10;'
 ```
 
@@ -102,6 +106,8 @@ sqlite3 -header -column .data/positive-bot.db 'SELECT r.user_id, e.* FROM exchan
 **배포 전 영구 DB 연결이 필요하다.** Vercel 함수의 로컬 SQLite는 인스턴스 사이에 공유되지 않고 영속성을 보장하지 않는다. `/tmp`로 옮기는 것도 해결책이 아니다. 현재는 Vercel에서 SQLite 자동 초기화를 생략하고 DB 접근을 차단한다. 화면·API 뼈대의 배포 형태만 준비됐으며 회원·대화 저장 서비스의 배포가 완성된 상태는 아니다. Vercel을 유지하려면 외부 DB를 결정하고 인증·채팅 SQL과 `app/db.py`를 함께 맞춰야 한다. [Vercel SQLite 제약](https://vercel.com/kb/guide/is-sqlite-supported-in-vercel)
 
 ## 제출 전 확인
+
+인증 검증: Python 3.12에서 **전체 52개 테스트(인증 46개 + 기존 기반 6개)** 통과. HTTPS 쿠키, 만료 경계, 새로운 Python 프로세스에서의 세션 유지, 동시 중복 가입, DB 장애 롤백과 사용자별 인증 구분을 확인했다. 실행 명령은 `uv run python -m unittest discover -s tests -v`다. 이 결과는 화면·채팅 구현이나 실제 배포 검증까지 완료됐다는 뜻은 아니다.
 
 - [ ] 로그인한 사용자만 질문 가능, 다른 사용자의 방·내역 접근 불가
 - [ ] 실제 AI API 호출과 최근 5개 Q/A 문맥 유지
