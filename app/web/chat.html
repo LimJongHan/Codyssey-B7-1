@@ -1,22 +1,74 @@
-{% extends 'base.html' %}
-{% block title %}해피 — 긍정 대화방{% endblock %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>해피 긍정봇 — 긍정 대화방</title>
+  
+  <meta name="description" content="지친 일상에 온기를 더하는 AI 긍정 메이트 해피(Happi). 오늘 하루 당신의 편이 되어 따뜻한 위로와 긍정 확언을 전합니다.">
+  <meta property="og:title" content="해피(Happi) - AI 긍정 메이트">
+  <meta property="og:description" content="매일 만나는 나만의 긍정 AI 친구">
+  
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀️</text></svg>">
+  
+  <link rel="stylesheet" href="/static/css/theme.css">
+  <link rel="stylesheet" href="/static/css/character.css">
+  <link rel="stylesheet" href="/static/css/chat.css">
+</head>
+<body>
 
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
-{% endblock %}
-
-{% block body_class %}{% endblock %}
-
-{% block content %}
 <div class="chat-layout" id="chatLayout">
 
-  {# ── 사이드바 ── #}
+  <!-- ── 사이드바 ── -->
   <aside class="sidebar" id="sidebar">
 
     <div class="sidebar-head">
       <a href="/" class="sidebar-logo-link" aria-label="해피 홈으로">
         <div class="sidebar-logo-icon">
-          {% with size='icon', mood='cheerful' %}{% include 'components/character.html' %}{% endwith %}
+          <div class="happi happi--icon happi--cheerful" data-happi role="img" aria-label="해피 마스코트">
+            <svg class="happi__svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+              <defs>
+                <radialGradient id="hFace_icon" cx="40%" cy="32%" r="70%" fx="40%" fy="32%">
+                  <stop offset="0%" stop-color="#FFE566"/>
+                  <stop offset="50%" stop-color="#FFB830"/>
+                  <stop offset="85%" stop-color="#F08A00"/>
+                  <stop offset="100%" stop-color="#CC6600"/>
+                </radialGradient>
+                <radialGradient id="hShine_icon" cx="35%" cy="25%" r="50%">
+                  <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.68"/>
+                  <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+                </radialGradient>
+                <radialGradient id="hBlush_icon" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#FF85A2" stop-opacity="0.60"/>
+                  <stop offset="100%" stop-color="#FF85A2" stop-opacity="0"/>
+                </radialGradient>
+                <filter id="hShadow_icon" x="-25%" y="-15%" width="155%" height="150%">
+                  <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#FF8800" flood-opacity="0.35"/>
+                </filter>
+              </defs>
+              <g filter="url(#hShadow_icon)">
+                <circle cx="50" cy="50" r="36" fill="url(#hFace_icon)"/>
+              </g>
+              <ellipse cx="40" cy="37" rx="13" ry="9" fill="url(#hShine_icon)" transform="rotate(-18 40 37)"/>
+              <g class="happi__eyes">
+                <g class="happi__eye happi__eye--l">
+                  <circle cx="38" cy="48" r="6" fill="#1A1040"/>
+                  <circle cx="35.5" cy="45.5" r="2" fill="#FFFFFF"/>
+                  <circle cx="40" cy="51" r="1" fill="#FFFFFF" fill-opacity="0.45"/>
+                </g>
+                <g class="happi__eye happi__eye--r">
+                  <circle cx="62" cy="48" r="6" fill="#1A1040"/>
+                  <circle cx="59.5" cy="45.5" r="2" fill="#FFFFFF"/>
+                  <circle cx="64" cy="51" r="1" fill="#FFFFFF" fill-opacity="0.45"/>
+                </g>
+              </g>
+              <ellipse cx="28" cy="58" rx="9" ry="6" fill="url(#hBlush_icon)"/>
+              <ellipse cx="72" cy="58" rx="9" ry="6" fill="url(#hBlush_icon)"/>
+              <g class="happi__mouth">
+                <path d="M 37 62 Q 50 76 63 62" stroke="#1A1040" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+              </g>
+            </svg>
+          </div>
         </div>
         <span class="sidebar-logo-name">해피</span>
         <span class="sidebar-logo-tag">AI</span>
@@ -41,7 +93,7 @@
 
     <div class="sidebar-scroll">
 
-      {# 즐겨찾기 #}
+      <!-- 즐겨찾기 -->
       <div>
         <div class="sec-header">
           <span class="sec-label">
@@ -82,7 +134,7 @@
         </ul>
       </div>
 
-      {# 최근 대화 #}
+      <!-- 최근 대화 -->
       <div>
         <div class="sec-header">
           <span class="sec-label">
@@ -95,7 +147,7 @@
         </div>
         <div class="time-group">
           <span class="time-label">오늘</span>
-          <ul class="chat-list">
+          <ul class="chat-list" id="chatHistoryList">
             <li class="chat-item" data-id="c-101">
               <span class="chat-emoji">💬</span>
               <span class="chat-title">오늘 하루의 긍정 에너지 충전 ✨</span>
@@ -151,46 +203,28 @@
       </div>
     </div>
 
-    <div class="sidebar-foot">
-      {% if is_logged_in %}
-        <div class="user-card">
-          <div class="user-avatar">{{ user_name[0]|default('나') }}</div>
-          <div class="user-info">
-            <div class="user-name-txt">{{ user_name }}</div>
-            <div class="user-email-txt">{{ user_email }}</div>
-          </div>
-          <a href="/logout" class="btn-logout" title="로그아웃">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-              <polyline points="16 17 21 12 16 7"/>
-              <line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-          </a>
-        </div>
-      {% else %}
-        <div class="guest-card">
-          <div class="guest-badge">게스트 모드</div>
-          <p class="guest-desc">로그인하면 대화 기록을 영구 보관할 수 있어요.</p>
-          <a href="/auth" class="btn-guest-login">
-            <span>로그인 / 회원가입</span>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2.2">
-              <path d="M5 12h14m-7-7 7 7-7 7"/>
-            </svg>
-          </a>
-        </div>
-      {% endif %}
+    <div class="sidebar-foot" id="sidebarFoot">
+      <div class="guest-card" id="guestCard">
+        <div class="guest-badge">게스트 모드</div>
+        <p class="guest-desc">로그인하면 대화 기록을 영구 보관할 수 있어요.</p>
+        <a href="/auth" class="btn-guest-login">
+          <span>로그인 / 회원가입</span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.2">
+            <path d="M5 12h14m-7-7 7 7-7 7"/>
+          </svg>
+        </a>
+      </div>
     </div>
 
   </aside>
 
   <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
-  {# ── 메인 채팅 뷰포트 ── #}
+  <!-- ── 메인 채팅 뷰포트 ── -->
   <main class="chat-viewport">
 
-    {# 헤더 #}
+    <!-- 헤더 -->
     <header class="chat-header">
       <div class="header-left">
         <button class="btn-toggle" id="btnToggle" aria-label="사이드바 토글">
@@ -208,25 +242,18 @@
           </div>
         </div>
       </div>
-      <div>
-        {% if is_logged_in %}
-          <div class="header-user">
-            <div class="header-avatar">{{ user_name[0]|default('나') }}</div>
-            <span class="header-uname">{{ user_name }}</span>
-          </div>
-        {% else %}
-          <a href="/auth" class="btn-header-login">
-            <span>로그인</span>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2.2">
-              <path d="M5 12h14m-7-7 7 7-7 7"/>
-            </svg>
-          </a>
-        {% endif %}
+      <div id="headerAuthArea">
+        <a href="/auth" class="btn-header-login">
+          <span>로그인</span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.2">
+            <path d="M5 12h14m-7-7 7 7-7 7"/>
+          </svg>
+        </a>
       </div>
     </header>
 
-    {# 오프라인 배너 #}
+    <!-- 오프라인 배너 -->
     <div class="offline-banner" id="offlineBanner" role="alert">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
            stroke="currentColor" stroke-width="2.2">
@@ -238,21 +265,72 @@
       <span>인터넷 연결이 끊겼습니다. 연결을 확인해 주세요.</span>
     </div>
 
-    {# 게스트 제한 배너 #}
-    {% if not is_logged_in %}
+    <!-- 게스트 제한 배너 -->
     <div class="guest-limit-banner" id="guestLimitBanner">
       <span class="glb-txt">💛 로그인하면 대화 기록이 저장되고 더 많이 이야기 나눌 수 있어요!</span>
       <a href="/auth" class="btn-glb-login">지금 시작하기</a>
     </div>
-    {% endif %}
 
-    {# 메시지 피드 #}
+    <!-- 메시지 피드 -->
     <div class="chat-feed" id="chatFeed">
       <div class="feed-inner" id="feedInner">
 
         <div class="welcome-banner" id="welcomeBanner">
           <div class="wb-mascot">
-            {% with size='md', mood='cheerful' %}{% include 'components/character.html' %}{% endwith %}
+            <div class="happi happi--md happi--cheerful" data-happi role="img" aria-label="해피 마스코트">
+              <div class="happi__glow"></div>
+              <svg class="happi__svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+                <defs>
+                  <radialGradient id="hFace_md_chat" cx="40%" cy="32%" r="70%">
+                    <stop offset="0%" stop-color="#FFE566"/>
+                    <stop offset="50%" stop-color="#FFB830"/>
+                    <stop offset="100%" stop-color="#CC6600"/>
+                  </radialGradient>
+                  <radialGradient id="hShine_md_chat" cx="35%" cy="25%" r="50%">
+                    <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.68"/>
+                    <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+                  </radialGradient>
+                  <radialGradient id="hBlush_md_chat" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#FF85A2" stop-opacity="0.60"/>
+                    <stop offset="100%" stop-color="#FF85A2" stop-opacity="0"/>
+                  </radialGradient>
+                  <filter id="hShadow_md_chat" x="-25%" y="-15%" width="155%" height="150%">
+                    <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#FF8800" flood-opacity="0.35"/>
+                  </filter>
+                </defs>
+                <g class="happi__rays" opacity="0.82">
+                  <g transform="rotate(0, 50, 50)"><rect x="48" y="3" width="4" height="10" rx="2" fill="#FFD060" opacity="0.9"/></g>
+                  <g transform="rotate(45, 50, 50)"><rect x="48" y="3" width="4" height="10" rx="2" fill="#FFD060" opacity="0.9"/></g>
+                  <g transform="rotate(90, 50, 50)"><rect x="48" y="3" width="4" height="10" rx="2" fill="#FFD060" opacity="0.9"/></g>
+                  <g transform="rotate(135, 50, 50)"><rect x="48" y="3" width="4" height="10" rx="2" fill="#FFD060" opacity="0.9"/></g>
+                  <g transform="rotate(180, 50, 50)"><rect x="48" y="3" width="4" height="10" rx="2" fill="#FFD060" opacity="0.9"/></g>
+                  <g transform="rotate(225, 50, 50)"><rect x="48" y="3" width="4" height="10" rx="2" fill="#FFD060" opacity="0.9"/></g>
+                  <g transform="rotate(270, 50, 50)"><rect x="48" y="3" width="4" height="10" rx="2" fill="#FFD060" opacity="0.9"/></g>
+                  <g transform="rotate(315, 50, 50)"><rect x="48" y="3" width="4" height="10" rx="2" fill="#FFD060" opacity="0.9"/></g>
+                </g>
+                <g filter="url(#hShadow_md_chat)">
+                  <circle cx="50" cy="50" r="36" fill="url(#hFace_md_chat)"/>
+                </g>
+                <ellipse cx="40" cy="37" rx="13" ry="9" fill="url(#hShine_md_chat)" transform="rotate(-18 40 37)"/>
+                <g class="happi__eyes">
+                  <g class="happi__eye happi__eye--l">
+                    <circle cx="38" cy="48" r="6" fill="#1A1040"/>
+                    <circle cx="35.5" cy="45.5" r="2" fill="#FFFFFF"/>
+                    <circle cx="40" cy="51" r="1" fill="#FFFFFF" fill-opacity="0.45"/>
+                  </g>
+                  <g class="happi__eye happi__eye--r">
+                    <circle cx="62" cy="48" r="6" fill="#1A1040"/>
+                    <circle cx="59.5" cy="45.5" r="2" fill="#FFFFFF"/>
+                    <circle cx="64" cy="51" r="1" fill="#FFFFFF" fill-opacity="0.45"/>
+                  </g>
+                </g>
+                <ellipse cx="28" cy="58" rx="9" ry="6" fill="url(#hBlush_md_chat)"/>
+                <ellipse cx="72" cy="58" rx="9" ry="6" fill="url(#hBlush_md_chat)"/>
+                <g class="happi__mouth">
+                  <path d="M 37 62 Q 50 76 63 62" stroke="#1A1040" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+                </g>
+              </svg>
+            </div>
           </div>
           <h2 class="wb-title">
             안녕하세요! 저는 <span class="name-hi">해피</span>예요 ☀️
@@ -284,7 +362,21 @@
         <div class="msg-list" id="msgList">
           <div class="msg-row msg-row--bot">
             <div class="msg-av">
-              {% with size='sm', mood='cheerful' %}{% include 'components/character.html' %}{% endwith %}
+              <div class="happi happi--sm happi--cheerful" data-happi role="img" aria-label="해피">
+                <svg class="happi__svg" viewBox="0 0 100 100" fill="none" overflow="visible">
+                  <defs>
+                    <radialGradient id="hFace_msg_chat" cx="40%" cy="32%" r="70%">
+                      <stop offset="0%" stop-color="#FFE566"/>
+                      <stop offset="50%" stop-color="#FFB830"/>
+                      <stop offset="100%" stop-color="#CC6600"/>
+                    </radialGradient>
+                  </defs>
+                  <circle cx="50" cy="50" r="36" fill="url(#hFace_msg_chat)"/>
+                  <circle cx="38" cy="48" r="6" fill="#1A1040"/>
+                  <circle cx="62" cy="48" r="6" fill="#1A1040"/>
+                  <path d="M 37 62 Q 50 76 63 62" stroke="#1A1040" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+                </svg>
+              </div>
             </div>
             <div class="msg-col">
               <span class="msg-sender">해피</span>
@@ -300,7 +392,14 @@
 
         <div class="typing-row" id="typingRow" style="display:none;">
           <div class="msg-av">
-            {% with size='sm', mood='listening' %}{% include 'components/character.html' %}{% endwith %}
+            <div class="happi happi--sm happi--listening">
+              <svg class="happi__svg" viewBox="0 0 100 100" fill="none">
+                <circle cx="50" cy="50" r="36" fill="#FFB830"/>
+                <circle cx="38" cy="48" r="5" fill="#1A1040"/>
+                <circle cx="62" cy="48" r="5" fill="#1A1040"/>
+                <path d="M 39 60 Q 50 68 61 60" stroke="#1A1040" stroke-width="2.5" fill="none"/>
+              </svg>
+            </div>
           </div>
           <div class="typing-bubble">
             <span class="dot"></span>
@@ -312,7 +411,7 @@
       </div>
     </div>
 
-    {# 인풋 도크 #}
+    <!-- 인풋 도크 -->
     <div class="input-dock">
       <div class="dock-inner">
         <span class="dock-input-error" id="inputError"></span>
@@ -351,11 +450,9 @@
   </main>
 </div>
 
-{# 토스트 컨테이너 #}
+<!-- 토스트 컨테이너 -->
 <div id="toastContainer"></div>
 
-{% endblock %}
-
-{% block scripts %}
-<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
-{% endblock %}
+<script src="/static/js/chat.js"></script>
+</body>
+</html>

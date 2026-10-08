@@ -209,17 +209,26 @@
     setSubmitLoading(true);
 
     try {
-      const endpoint = isRegister ? '/api/register' : '/api/login';
-      const payload  = {
-        email:    userEmail?.value.trim(),
+      const endpoint = isRegister ? '/api/auth/signup' : '/api/auth/login';
+      
+      // 팀 규격: username (3~30자, 영문/숫자/언더스코어), password (8자 이상)
+      // 이메일 입력값에서 유효한 username을 추출하거나 name/email을 매핑
+      const emailVal = userEmail?.value.trim() ?? '';
+      const rawUser = userName?.value.trim() || emailVal.split('@')[0] || 'user';
+      // 영문/숫자/언더스코어만 남기고 3자 이상 보장
+      const cleanUser = rawUser.replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 30);
+      const username = cleanUser.length >= 3 ? cleanUser : (cleanUser + '_01').slice(0, 30);
+
+      const payload = {
+        username: username,
         password: userPw?.value,
-        ...(isRegister && { name: userName?.value.trim() }),
       };
 
       const res = await fetch(endpoint, {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body:    JSON.stringify(payload),
+        credentials: 'same-origin',
         signal:  AbortSignal.timeout(15_000),
       });
 
@@ -227,12 +236,25 @@
 
       if (res.ok) {
         showToast(isRegister ? '환영해요! 해피와 함께해요 🎉' : '돌아오셨군요! 반가워요 ☀️', 'success');
-        setTimeout(() => { window.location.href = data?.redirect ?? '/chat'; }, 900);
+        if (isRegister) {
+          // 가입 성공 시 로그인 탭으로 전환 또는 자동 로그인 안내
+          setTimeout(() => {
+            switchTab(false);
+            showToast('로그인을 진행해 주세요.', 'info');
+          }, 900);
+        } else {
+          setTimeout(() => { window.location.href = '/chat'; }, 900);
+        }
       } else {
-        // 필드별 오류
-        if (data?.field === 'email')    showFieldError(userEmail, emailErr, data.message ?? '이미 사용 중인 이메일이에요.');
-        else if (data?.field === 'password') showFieldError(userPw, pwErr, data.message ?? '비밀번호가 일치하지 않아요.');
-        else showToast(data?.message ?? '오류가 발생했습니다. 다시 시도해 주세요.', 'error');
+        if (res.status === 409) {
+          showFieldError(userEmail, emailErr, data?.detail || '이미 사용 중인 아이디입니다.');
+        } else if (res.status === 401) {
+          showFieldError(userPw, pwErr, data?.detail || '아이디 또는 비밀번호가 일치하지 않아요.');
+        } else if (res.status === 422) {
+          showToast('입력 형식을 확인해 주세요. (아이디 3~30자, 비밀번호 8자 이상)', 'error');
+        } else {
+          showToast(data?.detail || data?.message || '오류가 발생했습니다. 다시 시도해 주세요.', 'error');
+        }
       }
     } catch (err) {
       if (err.name === 'TimeoutError') {

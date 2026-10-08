@@ -329,19 +329,21 @@
         <div class="msg-av">${botAvatarSVG}</div>
         <div class="msg-col">
           <span class="msg-sender">해피</span>
-          <div class="msg-bubble">${escHtml(text)}</div>
+          <div class="msg-bubble"></div>
           <span class="msg-time">${timeStr}</span>
         </div>`;
+      row.querySelector('.msg-bubble').textContent = text;
     } else if (role === 'error') {
       const retryData = extra.retryText ? `data-retry="${escHtml(extra.retryText)}"` : '';
       row.innerHTML = `
         <div class="msg-av">${botAvatarSVG}</div>
         <div class="msg-col">
           <div class="msg-bubble">
-            <span>⚠️ ${escHtml(text)}</span>
+            <span class="err-txt"></span>
             ${retryData ? `<button class="btn-retry" ${retryData}>다시 시도</button>` : ''}
           </div>
         </div>`;
+      row.querySelector('.err-txt').textContent = `⚠️ ${text}`;
 
       // 재시도 버튼 이벤트
       const retryBtn = row.querySelector('.btn-retry');
@@ -359,9 +361,10 @@
       // user
       row.innerHTML = `
         <div class="msg-col">
-          <div class="msg-bubble">${escHtml(text)}</div>
+          <div class="msg-bubble"></div>
           <span class="msg-time">${timeStr}</span>
         </div>`;
+      row.querySelector('.msg-bubble').textContent = text;
     }
 
     msgList.appendChild(row);
@@ -412,35 +415,76 @@
     }
 
     try {
-      const res = await fetch('/api/chat', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ message: text }),
-        signal:  AbortSignal.timeout(30_000), // 30초 타임아웃
-      });
+      // 1. 활성 방 ID 확인 (기본값 1, 또는 팀 백엔드 방 생성)
+      let roomId = sessionStorage.getItem('happi_active_room_id') || '1';
+
+      // 2. 팀 백엔드 규격: POST /api/rooms/{room_id}/messages with {"question": text}
+      // 또는 폴백 호환: POST /api/chat with {"message": text}
+      let res;
+      try {
+        res = await fetch(`/api/rooms/${roomId}/messages`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body:    JSON.stringify({ question: text }),
+          credentials: 'same-origin',
+          signal:  AbortSignal.timeout(30_000),
+        });
+
+        // 만약 404(방 없음)이면 새 방 생성 시도 후 재전송
+        if (res.status === 404) {
+          const createRoomRes = await fetch('/api/rooms', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ title: '오늘의 대화' }),
+            credentials: 'same-origin'
+          });
+          if (createRoomRes.ok) {
+            const newRoom = await createRoomRes.json();
+            roomId = String(newRoom.id);
+            sessionStorage.setItem('happi_active_room_id', roomId);
+            res = await fetch(`/api/rooms/${roomId}/messages`, {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              body:    JSON.stringify({ question: text }),
+              credentials: 'same-origin',
+              signal:  AbortSignal.timeout(30_000),
+            });
+          }
+        }
+      } catch (networkErr) {
+        // 백엔드 엔드포인트 실패 시 /api/chat으로 안전 폴백
+        res = await fetch('/api/chat', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ message: text }),
+          signal:  AbortSignal.timeout(30_000),
+        });
+      }
 
       if (!res.ok) {
-        // HTTP 오류 상태
         if (res.status === 401) {
-          // 비로그인 → 로그인 유도
           appendMsg(
             '로그인이 필요한 기능이에요. 로그인 후 이용해 주세요.',
             'error',
             {}
           );
           showToast('로그인이 필요합니다.', 'warn');
-        } else if (res.status === 429) {
-          appendMsg('요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.', 'error', { retryText: text });
-          showToast('잠시 후 다시 시도해 주세요.', 'warn');
+        } else if (res.status === 422) {
+          appendMsg('질문 형식이 올바르지 않습니다. (1~2,000자 이내)', 'error', { retryText: text });
+          showToast('입력 형식을 확인해 주세요.', 'warn');
+        } else if (res.status === 502 || res.status === 504) {
+          appendMsg('AI 서비스 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.', 'error', { retryText: text });
+          showToast('AI 응답 지연', 'warn');
         } else {
-          throw new Error(`HTTP ${res.status}`);
+          appendMsg('일시적인 오류가 발생했습니다. 다시 시도해 주세요.', 'error', { retryText: text });
         }
         return;
       }
 
       const data = await res.json();
-      const reply = data?.reply
-        ?? '잠깐 생각이 많아졌어요 😅 다시 이야기해 줄게요!';
+      // 팀 규격 Exchange의 answer 또는 호환 reply 수신
+      const reply = data?.answer || data?.reply
+        || '오늘 하루도 정말 고생 많으셨어요. 당신의 곁에서 항상 응원할게요! ☀️';
       appendMsg(reply, 'bot');
 
     } catch (err) {
