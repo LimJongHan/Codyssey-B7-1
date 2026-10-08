@@ -281,21 +281,20 @@
               <div class="happi__glow"></div>
               <svg class="happi__svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" overflow="visible">
                 <defs>
-                  <radialGradient id="hFace_md" cx="40%" cy="32%" r="70%" fx="40%" fy="32%">
+                  <radialGradient id="hFace_md_chat" cx="40%" cy="32%" r="70%">
                     <stop offset="0%" stop-color="#FFE566"/>
                     <stop offset="50%" stop-color="#FFB830"/>
-                    <stop offset="85%" stop-color="#F08A00"/>
                     <stop offset="100%" stop-color="#CC6600"/>
                   </radialGradient>
-                  <radialGradient id="hShine_md" cx="35%" cy="25%" r="50%">
+                  <radialGradient id="hShine_md_chat" cx="35%" cy="25%" r="50%">
                     <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.68"/>
                     <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
                   </radialGradient>
-                  <radialGradient id="hBlush_md" cx="50%" cy="50%" r="50%">
+                  <radialGradient id="hBlush_md_chat" cx="50%" cy="50%" r="50%">
                     <stop offset="0%" stop-color="#FF85A2" stop-opacity="0.60"/>
                     <stop offset="100%" stop-color="#FF85A2" stop-opacity="0"/>
                   </radialGradient>
-                  <filter id="hShadow_md" x="-25%" y="-15%" width="155%" height="150%">
+                  <filter id="hShadow_md_chat" x="-25%" y="-15%" width="155%" height="150%">
                     <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#FF8800" flood-opacity="0.35"/>
                   </filter>
                 </defs>
@@ -309,10 +308,10 @@
                   <g transform="rotate(270, 50, 50)"><rect x="48" y="3" width="4" height="10" rx="2" fill="#FFD060" opacity="0.9"/></g>
                   <g transform="rotate(315, 50, 50)"><rect x="48" y="3" width="4" height="10" rx="2" fill="#FFD060" opacity="0.9"/></g>
                 </g>
-                <g filter="url(#hShadow_md)">
-                  <circle cx="50" cy="50" r="36" fill="url(#hFace_md)"/>
+                <g filter="url(#hShadow_md_chat)">
+                  <circle cx="50" cy="50" r="36" fill="url(#hFace_md_chat)"/>
                 </g>
-                <ellipse cx="40" cy="37" rx="13" ry="9" fill="url(#hShine_md)" transform="rotate(-18 40 37)"/>
+                <ellipse cx="40" cy="37" rx="13" ry="9" fill="url(#hShine_md_chat)" transform="rotate(-18 40 37)"/>
                 <g class="happi__eyes">
                   <g class="happi__eye happi__eye--l">
                     <circle cx="38" cy="48" r="6" fill="#1A1040"/>
@@ -325,8 +324,8 @@
                     <circle cx="64" cy="51" r="1" fill="#FFFFFF" fill-opacity="0.45"/>
                   </g>
                 </g>
-                <ellipse cx="28" cy="58" rx="9" ry="6" fill="url(#hBlush_md)"/>
-                <ellipse cx="72" cy="58" rx="9" ry="6" fill="url(#hBlush_md)"/>
+                <ellipse cx="28" cy="58" rx="9" ry="6" fill="url(#hBlush_md_chat)"/>
+                <ellipse cx="72" cy="58" rx="9" ry="6" fill="url(#hBlush_md_chat)"/>
                 <g class="happi__mouth">
                   <path d="M 37 62 Q 50 76 63 62" stroke="#1A1040" stroke-width="2.8" stroke-linecap="round" fill="none"/>
                 </g>
@@ -366,13 +365,13 @@
               <div class="happi happi--sm happi--cheerful" data-happi role="img" aria-label="해피">
                 <svg class="happi__svg" viewBox="0 0 100 100" fill="none" overflow="visible">
                   <defs>
-                    <radialGradient id="hFace_msg" cx="40%" cy="32%" r="70%">
+                    <radialGradient id="hFace_msg_chat" cx="40%" cy="32%" r="70%">
                       <stop offset="0%" stop-color="#FFE566"/>
                       <stop offset="50%" stop-color="#FFB830"/>
                       <stop offset="100%" stop-color="#CC6600"/>
                     </radialGradient>
                   </defs>
-                  <circle cx="50" cy="50" r="36" fill="url(#hFace_msg)"/>
+                  <circle cx="50" cy="50" r="36" fill="url(#hFace_msg_chat)"/>
                   <circle cx="38" cy="48" r="6" fill="#1A1040"/>
                   <circle cx="62" cy="48" r="6" fill="#1A1040"/>
                   <path d="M 37 62 Q 50 76 63 62" stroke="#1A1040" stroke-width="2.8" stroke-linecap="round" fill="none"/>

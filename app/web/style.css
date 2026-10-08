@@ -1,2 +1,4 @@
-body { font-family: system-ui, sans-serif; margin: 0; background: #f8faf7; color: #24352a; }
-main { max-width: 640px; margin: 64px auto; padding: 24px; }
+@import "/static/css/theme.css";
+@import "/static/css/character.css";
+@import "/static/css/chat.css";
+@import "/static/css/auth.css";

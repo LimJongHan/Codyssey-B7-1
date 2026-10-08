@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>해피 — 로그인</title>
+  
+  <meta name="description" content="지친 일상에 온기를 더하는 AI 긍정 메이트 해피(Happi). 오늘 하루 당신의 편이 되어 따뜻한 위로와 긍정 확언을 전합니다.">
+  <meta property="og:title" content="해피(Happi) - AI 긍정 메이트">
+  <meta property="og:description" content="매일 만나는 나만의 긍정 AI 친구">
+  
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀️</text></svg>">
+  
+  <link rel="stylesheet" href="/static/css/theme.css">
+  <link rel="stylesheet" href="/static/css/character.css">
+  <link rel="stylesheet" href="/static/css/auth.css">
+</head>
+<body class="auth-page">
+
+<!-- ── 왼쪽 브랜드 패널 ── -->
+<section class="auth-brand">
+
+  <a href="/" class="brand-logo-link" aria-label="해피 홈으로 이동">
+    <div class="brand-logo-icon">
+      <div class="happi happi--icon happi--cheerful" data-happi role="img" aria-label="해피 마스코트">
+        <svg class="happi__svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+          <defs>
+            <radialGradient id="hFace_icon_auth" cx="40%" cy="32%" r="70%">
+              <stop offset="0%" stop-color="#FFE566"/>
+              <stop offset="50%" stop-color="#FFB830"/>
+              <stop offset="85%" stop-color="#F08A00"/>
+              <stop offset="100%" stop-color="#CC6600"/>
+            </radialGradient>
+            <radialGradient id="hShine_icon_auth" cx="35%" cy="25%" r="50%">
+              <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.68"/>
+              <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="hBlush_icon_auth" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#FF85A2" stop-opacity="0.60"/>
+              <stop offset="100%" stop-color="#FF85A2" stop-opacity="0"/>
+            </radialGradient>
+            <filter id="hShadow_icon_auth" x="-25%" y="-15%" width="155%" height="150%">
+              <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#FF8800" flood-opacity="0.35"/>
+            </filter>
+          </defs>
+          <g filter="url(#hShadow_icon_auth)">
+            <circle cx="50" cy="50" r="36" fill="url(#hFace_icon_auth)"/>
+          </g>
+          <ellipse cx="40" cy="37" rx="13" ry="9" fill="url(#hShine_icon_auth)" transform="rotate(-18 40 37)"/>
+          <g class="happi__eyes">
+            <g class="happi__eye happi__eye--l">
+              <circle cx="38" cy="48" r="6" fill="#1A1040"/>
+              <circle cx="35.5" cy="45.5" r="2" fill="#FFFFFF"/>
+              <circle cx="40" cy="51" r="1" fill="#FFFFFF" fill-opacity="0.45"/>
+            </g>
+            <g class="happi__eye happi__eye--r">
+              <circle cx="62" cy="48" r="6" fill="#1A1040"/>
+              <circle cx="59.5" cy="45.5" r="2" fill="#FFFFFF"/>
+              <circle cx="64" cy="51" r="1" fill="#FFFFFF" fill-opacity="0.45"/>
+            </g>
+          </g>
+          <ellipse cx="28" cy="58" rx="9" ry="6" fill="url(#hBlush_icon_auth)"/>
+          <ellipse cx="72" cy="58" rx="9" ry="6" fill="url(#hBlush_icon_auth)"/>
+          <g class="happi__mouth">
+            <path d="M 37 62 Q 50 76 63 62" stroke="#1A1040" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <span class="brand-logo-name">해피</span>
+    <div class="brand-logo-tag">
+      <div class="live-dot" style="width:5px;height:5px;"></div>
+      <span>AI</span>
+    </div>
+  </a>
+
+  <div class="brand-center">
+    <div class="brand-mascot-wrap">
+      <div class="happi happi--lg happi--cheerful" data-happi role="img" aria-label="해피 마스코트">
+        <div class="happi__glow"></div>
+        <svg class="happi__svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+          <defs>
+            <radialGradient id="hFace_lg_auth" cx="40%" cy="32%" r="70%">
+              <stop offset="0%" stop-color="#FFE566"/>
+              <stop offset="50%" stop-color="#FFB830"/>
+              <stop offset="85%" stop-color="#F08A00"/>
+              <stop offset="100%" stop-color="#CC6600"/>
+            </radialGradient>
+            <radialGradient id="hShine_lg_auth" cx="35%" cy="25%" r="50%">
+              <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.68"/>
+              <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="hBlush_lg_auth" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#FF85A2" stop-opacity="0.60"/>
+              <stop offset="100%" stop-color="#FF85A2" stop-opacity="0"/>
+            </radialGradient>
+            <filter id="hShadow_lg_auth" x="-25%" y="-15%" width="155%" height="150%">
+              <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#FF8800" flood-opacity="0.35"/>
+            </filter>
+          </defs>
+          <g class="happi__rays" opacity="0.82">
+            <g transform="rotate(0, 50, 50)"><rect x="48" y="3" width="4" height="10" rx="2" fill="#FFD060" opacity="0.9"/></g>
+            <g transform="rotate(45, 50, 50)"><rect x="48" y="3" width="4" height="10" rx="2" fill="#FFD060" opacity="0.9"/></g>
+            <g transform="rotate(90, 50, 50)"><rect x="48" y="3" width="4" height="10" rx="2" fill="#FFD060" opacity="0.9"/></g>
+            <g transform="rotate(135, 50, 50)"><rect x="48" y="3" width="4" height="10" rx="2" fill="#FFD060" opacity="0.9"/></g>
+            <g transform="rotate(180, 50, 50)"><rect x="48" y="3" width="4" height="10" rx="2" fill="#FFD060" opacity="0.9"/></g>
+            <g transform="rotate(225, 50, 50)"><rect x="48" y="3" width="4" height="10" rx="2" fill="#FFD060" opacity="0.9"/></g>
+            <g transform="rotate(270, 50, 50)"><rect x="48" y="3" width="4" height="10" rx="2" fill="#FFD060" opacity="0.9"/></g>
+            <g transform="rotate(315, 50, 50)"><rect x="48" y="3" width="4" height="10" rx="2" fill="#FFD060" opacity="0.9"/></g>
+          </g>
+          <g filter="url(#hShadow_lg_auth)">
+            <circle cx="50" cy="50" r="36" fill="url(#hFace_lg_auth)"/>
+          </g>
+          <ellipse cx="40" cy="37" rx="13" ry="9" fill="url(#hShine_lg_auth)" transform="rotate(-18 40 37)"/>
+          <g class="happi__eyes">
+            <g class="happi__eye happi__eye--l">
+              <circle cx="38" cy="48" r="6" fill="#1A1040"/>
+              <circle cx="35.5" cy="45.5" r="2" fill="#FFFFFF"/>
+              <circle cx="40" cy="51" r="1" fill="#FFFFFF" fill-opacity="0.45"/>
+            </g>
+            <g class="happi__eye happi__eye--r">
+              <circle cx="62" cy="48" r="6" fill="#1A1040"/>
+              <circle cx="59.5" cy="45.5" r="2" fill="#FFFFFF"/>
+              <circle cx="64" cy="51" r="1" fill="#FFFFFF" fill-opacity="0.45"/>
+            </g>
+          </g>
+          <ellipse cx="28" cy="58" rx="9" ry="6" fill="url(#hBlush_lg_auth)"/>
+          <ellipse cx="72" cy="58" rx="9" ry="6" fill="url(#hBlush_lg_auth)"/>
+          <g class="happi__mouth">
+            <path d="M 37 62 Q 50 76 63 62" stroke="#1A1040" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <div class="brand-bubble">
+      <p class="bubble-title">안녕하세요!<br>저는 <em>해피</em>예요 ☀️</p>
+      <p class="bubble-sub">
+        지친 하루도, 기쁜 하루도<br>
+        무엇이든 편하게 이야기해 주세요.<br>
+        언제나 당신 편에서 들을게요.
+      </p>
+    </div>
+  </div>
+
+  <div class="brand-features">
+    <div class="feature-row">
+      <div class="feature-icon">✨</div>
+      <span>24시간 공감과 긍정 에너지를 전달해요</span>
+    </div>
+    <div class="feature-row">
+      <div class="feature-icon">🔒</div>
+      <span>안전하게 보호되는 나만의 대화 공간</span>
+    </div>
+    <div class="feature-row">
+      <div class="feature-icon">💛</div>
+      <span>대화 기록을 언제든 꺼내볼 수 있어요</span>
+    </div>
+  </div>
+
+</section>
+
+<!-- ── 오른쪽 인증 카드 ── -->
+<section class="auth-form-side">
+  <div class="auth-card">
+
+    <div class="auth-card-header">
+      <h1 class="auth-title" id="authTitle">다시 만나서 반가워요!</h1>
+      <p class="auth-desc" id="authDesc">해피와 나눈 소중한 대화를 이어가 보세요.</p>
+    </div>
+
+    <div class="auth-tabs" id="authTabs" role="tablist">
+      <button class="auth-tab-btn is-active" id="tabLogin"
+              role="tab" aria-selected="true">로그인</button>
+      <button class="auth-tab-btn" id="tabRegister"
+              role="tab" aria-selected="false">회원가입</button>
+      <div class="tab-track" id="tabTrack"></div>
+    </div>
+
+    <form class="auth-form" id="authForm" novalidate>
+
+      <div class="field-group" id="nameField" style="display:none;">
+        <label class="field-label" for="userName">닉네임</label>
+        <div class="field-wrap">
+          <span class="field-icon">🌱</span>
+          <input class="field-input" type="text" id="userName" name="name"
+                 placeholder="어떻게 불러드릴까요?" autocomplete="nickname"
+                 maxlength="20">
+        </div>
+        <span class="field-error" id="nameError"></span>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label" for="userEmail">이메일 주소</label>
+        <div class="field-wrap">
+          <span class="field-icon">✉️</span>
+          <input class="field-input" type="email" id="userEmail" name="email"
+                 placeholder="name@example.com" autocomplete="email"
+                 maxlength="100">
+        </div>
+        <span class="field-error" id="emailError"></span>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label" for="userPw">비밀번호</label>
+        <div class="field-wrap">
+          <span class="field-icon">🔑</span>
+          <input class="field-input" type="password" id="userPw" name="password"
+                 placeholder="8자 이상 입력해주세요" autocomplete="current-password"
+                 maxlength="72" style="padding-right:46px;">
+          <button type="button" class="btn-pw-toggle" id="togglePw" aria-label="비밀번호 표시">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+        <span class="field-error" id="pwError"></span>
+      </div>
+
+      <button type="submit" class="btn-submit" id="submitBtn">
+        <span class="btn-label" id="submitLabel">로그인하기</span>
+        <div class="spinner"></div>
+        <svg class="btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.6" stroke-linecap="round"
+             stroke-linejoin="round">
+          <path d="M5 12h14m-7-7 7 7-7 7"/>
+        </svg>
+      </button>
+    </form>
+
+    <div class="auth-divider"><span>또는</span></div>
+
+    <a href="/" class="btn-guest">
+      <span>☀️</span>
+      <span>로그인 없이 바로 대화해보기</span>
+    </a>
+    <p class="guest-note">
+      게스트로 시작해도 언제든 회원가입 후 대화를 이어갈 수 있습니다.
+    </p>
+
+  </div>
+</section>
+
+<!-- ── 토스트 컨테이너 ── -->
+<div id="toastContainer"></div>
+
+<script src="/static/js/auth.js"></script>
+</body>
+</html>
