@@ -1,4 +1,15 @@
+import logging
+import math
+import os
 from typing import Literal, TypedDict
+
+logger = logging.getLogger(__name__)
+SYSTEM_PROMPT = (
+    "너는 사용자의 이야기에 공감하고 격려하는 긍정봇이다. "
+    "한국어 존댓말로 사용자가 말한 상황과 감정을 구체적으로 짚고 짧게 답한다. "
+    "과장된 칭찬이나 상투적인 말을 반복하지 않고, 요청하지 않은 조언을 길게 하지 않는다. "
+    "감정에는 공감하되 사실을 지어내거나 위험한 행동을 긍정하지 않는다."
+)
 
 
 class Message(TypedDict):
@@ -16,8 +27,14 @@ class AIError(Exception):
 
 async def generate_reply(messages: list[Message]) -> str:
     """시간순 대화(마지막은 새 질문)를 받아 응답 텍스트만 반환한다."""
-    # TODO: 시스템 프롬프트 + messages로 실제 AI API 호출.
-    # AI_API_KEY, AI_MODEL, AI_TIMEOUT_SECONDS 환경 변수를 사용한다.
-    # ai_call_start / ai_call_success / ai_call_failure 로그를 남긴다.
-    # 타임아웃은 AIError(..., 504), 그 외 API 실패는 AIError(..., 502).
+    api_key = os.getenv("AI_API_KEY", "").strip()
+    model = os.getenv("AI_MODEL", "").strip() or "gpt-6-luna"
+    try:
+        timeout = float(os.getenv("AI_TIMEOUT_SECONDS", "30"))
+        if not api_key or not math.isfinite(timeout) or timeout <= 0:
+            raise ValueError
+    except ValueError:
+        logger.error("ai_call_failure reason=configuration")
+        raise AIError("AI 서비스 설정을 확인해 주세요.", 503) from None
+
     raise AIError("AI 연결 구현 예정입니다.", status_code=503)
