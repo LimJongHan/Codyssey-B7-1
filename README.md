@@ -6,6 +6,8 @@
 
 인증 내부의 비밀번호 해시·검증은 `argon2-cffi`의 Argon2id로 구현되어 있다. 공통 의존성 변경은 이 패키지와 잠금 파일에 한정하며 통합 시 함께 반영한다.
 
+DB 세션 생성·조회·폐기 함수도 준비되어 있다. 세션은 24시간 유효하며 DB에는 임의 토큰의 해시만 저장한다. HTTP 로그인 연결은 다음 구현 단계다.
+
 ## 실행
 
 Python 3.12와 [uv](https://docs.astral.sh/uv/getting-started/installation/)를 사용한다.
