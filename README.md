@@ -28,7 +28,7 @@ uv run --env-file .env uvicorn app.main:app --reload
 | `AI_MODEL` | AI 모델 이름, 비어 있으면 `gpt-5-mini` | 사용 |
 | `AI_TIMEOUT_SECONDS` | AI 요청 제한 시간, 기본 30초 | 사용 |
 
-`AI_API_KEY`에 Codyssey 발급 API 키를 설정한다. 호출 주소는 `https://copa.codyssey.kr/v1/chat/completions`이며, `AI_MODEL=gpt-5-mini`를 사용한다. [Codyssey API 문서](https://usr.codyssey.kr/public-api-console)를 기준으로 연결한다. AI 함수는 전달받은 대화를 순서대로 보내며, 공감 프롬프트·자동 재시도 없는 타임아웃·호출 성공/실패 로그를 적용한다. 자동 테스트는 외부 API를 대체하므로 비용이 발생하지 않는다. 2026-10-08 기준 자동 테스트 11개 통과 및 `gpt-5-mini` 실제 응답 수신을 확인했다.
+`AI_API_KEY`에 Codyssey 발급 API 키를 설정한다. 호출 주소는 `https://copa.codyssey.kr/v1/chat/completions`이며, `AI_MODEL=gpt-5-mini`를 사용한다. [Codyssey API 문서](https://usr.codyssey.kr/public-api-console)를 기준으로 연결한다. AI 함수는 새 질문을 포함한 최신 메시지 최대 20개를 순서대로 보내며(시스템 프롬프트 별도), 공감 프롬프트·자동 재시도 없는 타임아웃·호출 성공/실패 로그를 적용한다. 자동 테스트는 외부 API를 대체하므로 비용이 발생하지 않는다. 2026-10-08 기준 자동 테스트 12개 통과 및 `gpt-5-mini` 실제 응답 수신을 확인했다.
 
 `.env`와 DB 파일은 Git에서 제외한다. 인증 구현에 추가 설정이 필요하면 `.env.example`에 이름과 빈 값만 추가한다.
 

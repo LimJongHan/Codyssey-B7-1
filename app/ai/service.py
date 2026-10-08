@@ -28,7 +28,7 @@ class AIError(Exception):
 
 
 async def generate_reply(messages: list[Message]) -> str:
-    """시간순 대화(마지막은 새 질문)를 받아 응답 텍스트만 반환한다."""
+    """새 질문을 포함한 최신 메시지 20개를 사용하고 응답 텍스트만 반환한다."""
     api_key = os.getenv("AI_API_KEY", "").strip()
     model = os.getenv("AI_MODEL", "").strip() or "gpt-5-mini"
     try:
@@ -49,7 +49,7 @@ async def generate_reply(messages: list[Message]) -> str:
         ) as client:
             response = await client.chat.completions.create(
                 model=model,
-                messages=[{"role": "system", "content": SYSTEM_PROMPT}, *messages],
+                messages=[{"role": "system", "content": SYSTEM_PROMPT}, *messages[-20:]],
             )
     except APITimeoutError:
         logger.warning("ai_call_failure reason=timeout")

@@ -58,6 +58,26 @@ class AITests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("ai_call_success", str(logs.output))
         self.assertNotIn("test-secret", str(logs.output))
 
+    async def test_context_keeps_latest_twenty_messages(self):
+        for count in (19, 20, 21, 41):
+            with self.subTest(count=count):
+                messages = [
+                    {"role": "user" if i % 2 == 0 else "assistant", "content": str(i)}
+                    for i in range(count)
+                ]
+                original = [message.copy() for message in messages]
+
+                def handler(request):
+                    sent = json.loads(request.content)["messages"]
+                    self.assertEqual(sent[0], {"role": "system", "content": SYSTEM_PROMPT})
+                    self.assertEqual(sent[1:], original[-20:])
+                    self.assertEqual(sent[-1], original[-1])
+                    return self.response()
+
+                self.mock_api(handler)
+                await generate_reply(messages)
+                self.assertEqual(messages, original)
+
     async def test_api_failures_are_safe_and_not_retried(self):
         for failure, expected in [("timeout", 504), ("connection", 502), (401, 502), (429, 502), (500, 502)]:
             with self.subTest(failure=failure):
