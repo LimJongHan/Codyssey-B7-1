@@ -1,14 +1,17 @@
 import asyncio
 import logging
 import sqlite3
+from collections.abc import AsyncIterator
+from contextlib import aclosing
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.sse import EventSourceResponse, ServerSentEvent
 
-from app.ai.service import AIError, Message, generate_reply
+from app.ai.service import AIError, Message, generate_reply, stream_reply
 from app.auth.dependencies import get_current_user
 from app.auth.schemas import User
-from app.chat.schemas import ChatRequest, Exchange, Room, RoomCreate
+from app.chat.schemas import ChatDelta, ChatError, ChatRequest, Exchange, Room, RoomCreate
 from app.db import connect
 
 router = APIRouter(prefix="/api/rooms", tags=["chat"])
@@ -107,3 +110,65 @@ async def send_message(room_id: int, body: ChatRequest, user: CurrentUser):
         raise HTTPException(status_code=500, detail="대화를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.")
     logger.info("db_save_success user_id=%s room_id=%s exchange_id=%s", user.id, room_id, exchange["id"])
     return exchange
+
+
+def _load_messages(room_id: int, body: ChatRequest, user: CurrentUser) -> list[Message]:
+    logger.info("request_received user_id=%s room_id=%s", user.id, room_id)
+    try:
+        with connect() as db:
+            room = db.execute(
+                "SELECT id FROM rooms WHERE id = ? AND user_id = ?", (room_id, user.id),
+            ).fetchone()
+            if room is None:
+                raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다.")
+            rows = db.execute(
+                "SELECT question, answer FROM exchanges WHERE room_id = ? ORDER BY id DESC LIMIT 10",
+                (room_id,),
+            ).fetchall()
+    except sqlite3.Error:
+        logger.error("db_read_failure user_id=%s room_id=%s", user.id, room_id)
+        raise HTTPException(status_code=500, detail="대화 내역을 불러오지 못했습니다.") from None
+
+    messages = []
+    for row in reversed(rows):
+        messages.extend([
+            {"role": "user", "content": row["question"]},
+            {"role": "assistant", "content": row["answer"]},
+        ])
+    messages.append({"role": "user", "content": body.question})
+
+    return messages
+
+
+@router.post("/{room_id}/messages/stream", response_class=EventSourceResponse)
+async def send_message_stream(
+    room_id: int,
+    body: ChatRequest,
+    user: CurrentUser,
+    request: Request,
+    messages: Annotated[list[Message], Depends(_load_messages)],
+) -> AsyncIterator[ServerSentEvent]:
+    parts = []
+    try:
+        async with aclosing(stream_reply(messages)) as stream:
+            async for text in stream:
+                if await request.is_disconnected():
+                    return
+                parts.append(text)
+                yield ServerSentEvent(event="delta", data=ChatDelta(text=text))
+        if await request.is_disconnected():
+            return
+        with connect() as db:
+            cursor = db.execute(
+                "INSERT INTO exchanges (room_id, question, answer) VALUES (?, ?, ?)",
+                (room_id, body.question, "".join(parts).strip()),
+            )
+            row = db.execute("SELECT * FROM exchanges WHERE id = ?", (cursor.lastrowid,)).fetchone()
+            exchange = Exchange(**dict(row))
+        logger.info("db_save_success user_id=%s room_id=%s exchange_id=%s", user.id, room_id, exchange.id)
+        yield ServerSentEvent(event="done", data=exchange)
+    except AIError as error:
+        yield ServerSentEvent(event="error", data=ChatError(detail=str(error), status_code=error.status_code))
+    except sqlite3.Error:
+        logger.error("db_save_failure user_id=%s room_id=%s", user.id, room_id)
+        yield ServerSentEvent(event="error", data=ChatError(detail="대화를 저장하지 못했습니다.", status_code=500))

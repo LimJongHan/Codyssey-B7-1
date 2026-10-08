@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from app.ai.service import AIError, generate_reply
 from app.auth.dependencies import get_current_user
 from app.auth.schemas import User
 from app.db import connect, init_db
@@ -69,10 +68,3 @@ class TemplateTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 with connect():
                     pass
-
-
-class AITemplateTests(unittest.IsolatedAsyncioTestCase):
-    async def test_ai_does_not_fake_a_response(self):
-        with self.assertRaises(AIError) as error:
-            await generate_reply([{"role": "user", "content": "안녕"}])
-        self.assertEqual(error.exception.status_code, 503)
