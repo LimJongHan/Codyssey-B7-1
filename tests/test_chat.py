@@ -39,6 +39,16 @@ class ChatTestCase(unittest.TestCase):
     def login(self, user):
         app.dependency_overrides[get_current_user] = lambda: user
 
+    def create_room(self, title="대화"):
+        return self.client.post("/api/rooms", json={"title": title}).json()
+
+    def add_exchange(self, room_id, question, answer):
+        with connect() as db:
+            db.execute(
+                "INSERT INTO exchanges (room_id, question, answer) VALUES (?, ?, ?)",
+                (room_id, question, answer),
+            )
+
 
 class CreateRoomTests(ChatTestCase):
     def test_saves_room_for_current_user(self):
@@ -76,9 +86,6 @@ class CreateRoomTests(ChatTestCase):
 
 
 class ListRoomsTests(ChatTestCase):
-    def create_room(self, title):
-        return self.client.post("/api/rooms", json={"title": title}).json()
-
     def test_empty_when_no_rooms(self):
         response = self.client.get("/api/rooms")
         self.assertEqual(response.status_code, 200)
@@ -94,3 +101,36 @@ class ListRoomsTests(ChatTestCase):
         self.assertEqual(self.client.get("/api/rooms").json(), [bobs])
         self.login(self.alice)
         self.assertEqual(self.client.get("/api/rooms").json(), [second, first])
+
+
+class ListMessagesTests(ChatTestCase):
+    def test_empty_room(self):
+        room = self.create_room()
+        response = self.client.get(f"/api/rooms/{room['id']}/messages")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), [])
+
+    def test_lists_room_exchanges_oldest_first(self):
+        room = self.create_room()
+        other_room = self.create_room("다른 방")
+        self.add_exchange(room["id"], "첫 질문", "첫 답변")
+        self.add_exchange(other_room["id"], "다른 방 질문", "다른 방 답변")
+        self.add_exchange(room["id"], "둘째 질문", "둘째 답변")
+
+        exchanges = self.client.get(f"/api/rooms/{room['id']}/messages").json()
+        self.assertEqual([e["question"] for e in exchanges], ["첫 질문", "둘째 질문"])
+        self.assertEqual(set(exchanges[0]), {"id", "room_id", "question", "answer", "created_at"})
+        self.assertEqual((exchanges[0]["room_id"], exchanges[0]["answer"]), (room["id"], "첫 답변"))
+        self.assertLess(exchanges[0]["id"], exchanges[1]["id"])
+
+    def test_hides_missing_and_other_users_rooms(self):
+        self.login(self.add_user("bob"))
+        bobs_room = self.create_room("밥의 방")
+        self.add_exchange(bobs_room["id"], "밥의 고민", "밥에게 한 답변")
+        self.login(self.alice)
+
+        for room_id in (bobs_room["id"], 999):
+            with self.subTest(room_id=room_id):
+                response = self.client.get(f"/api/rooms/{room_id}/messages")
+                self.assertEqual(response.status_code, 404)
+                self.assertEqual(response.json(), {"detail": "채팅방을 찾을 수 없습니다."})

@@ -14,6 +14,13 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 logger = logging.getLogger(__name__)
 
 
+def _ensure_own_room(db, room_id: int, user_id: int):
+    # 방이 없거나 다른 사람의 방이면 같은 404로 응답해 존재 여부를 드러내지 않는다.
+    room = db.execute("SELECT 1 FROM rooms WHERE id = ? AND user_id = ?", (room_id, user_id)).fetchone()
+    if room is None:
+        raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다.")
+
+
 @router.post("", response_model=Room, status_code=201)
 def create_room(body: RoomCreate, user: CurrentUser):
     # 소유자는 인증된 user.id로만 정한다. 요청 본문에서 user_id를 받지 않는다.
@@ -43,8 +50,14 @@ def list_rooms(user: CurrentUser):
 
 @router.get("/{room_id}/messages", response_model=list[Exchange])
 def list_messages(room_id: int, user: CurrentUser):
-    # TODO: 방 소유권 확인 후 id 오름차순으로 조회. 없거나 다른 사람의 방이면 404.
-    raise HTTPException(status_code=501, detail="대화 내역 조회 구현 예정입니다.")
+    # 방 소유권 확인 후 과거→최신(id 오름차순)으로 반환한다.
+    with connect() as db:
+        _ensure_own_room(db, room_id, user.id)
+        exchanges = db.execute(
+            "SELECT id, room_id, question, answer, created_at FROM exchanges WHERE room_id = ? ORDER BY id",
+            (room_id,),
+        ).fetchall()
+    return [dict(exchange) for exchange in exchanges]
 
 
 @router.post("/{room_id}/messages", response_model=Exchange, status_code=201)
