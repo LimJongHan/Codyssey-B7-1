@@ -48,6 +48,7 @@
   let isSending    = false;
   let isCollapsed  = false;
   let guestCount   = parseInt(sessionStorage.getItem('happi_guest_count') || '0', 10);
+  let isLoggedIn   = false; // /api/auth/me 결과. 로그인 사용자에게는 게스트 안내를 보이지 않는다
   let lastRetryTime= 0;
 
   /* ==========================================================================
@@ -442,13 +443,13 @@
     appendMsg(text, 'user');
     setLoading(true);
 
-    // 게스트 카운터 증가
-    guestCount++;
-    sessionStorage.setItem('happi_guest_count', String(guestCount));
-
-    // 게스트 제한 배너 표시
-    if (guestLimitBanner && guestCount >= GUEST_LIMIT) {
-      guestLimitBanner.classList.add('is-visible');
+    // 게스트 카운터 증가와 제한 배너 표시 (비로그인일 때만)
+    if (!isLoggedIn) {
+      guestCount++;
+      sessionStorage.setItem('happi_guest_count', String(guestCount));
+      if (guestLimitBanner && guestCount >= GUEST_LIMIT) {
+        guestLimitBanner.classList.add('is-visible');
+      }
     }
 
     try {
@@ -577,8 +578,25 @@
     });
   }
 
+  /* 로그인 상태 확인: 로그인했으면 게스트 카드·로그인 버튼·게스트 배너를 숨긴다 */
+  async function syncAuthState () {
+    try {
+      const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+      isLoggedIn = res.ok;
+    } catch {
+      isLoggedIn = false;
+    }
+    if (!isLoggedIn) return;
+    const guestCard = document.getElementById('guestCard');
+    const headerAuthArea = document.getElementById('headerAuthArea');
+    if (guestCard) guestCard.style.display = 'none';
+    if (headerAuthArea) headerAuthArea.style.display = 'none';
+    guestLimitBanner?.classList.remove('is-visible');
+  }
+
   /* 초기 상태 동기화 */
   syncSendButton();
+  syncAuthState();
   loadRooms();
 
 })();
