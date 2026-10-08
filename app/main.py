@@ -39,6 +39,17 @@ def index():
     return FileResponse(WEB_DIR / "index.html")
 
 
+@app.get("/auth", include_in_schema=False)
+def auth_page():
+    return FileResponse(WEB_DIR / "auth.html")
+
+
+@app.get("/chat", include_in_schema=False)
+def chat_page():
+    return FileResponse(WEB_DIR / "chat.html")
+
+
 @app.get("/api/health", tags=["health"])
 def health():
     return {"status": "ok"}
+

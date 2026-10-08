@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>해피 — 로그인</title>
+  <link rel="stylesheet" href="/static/css/theme.css">
+  <link rel="stylesheet" href="/static/css/character.css">
+  <link rel="stylesheet" href="/static/css/auth.css">
+</head>
+<body class="auth-page">
+
+  <!-- 왼쪽 브랜드 패널 -->
+  <section class="auth-brand">
+    <a href="/" class="brand-logo-link" aria-label="해피 홈으로 이동">
+      <div class="brand-logo-icon">
+        <div class="happi happi--icon happi--cheerful" role="img" aria-label="해피">
+          <svg class="happi__svg" viewBox="0 0 100 100" fill="none">
+            <circle cx="50" cy="50" r="36" fill="#FFB830"/>
+            <circle cx="38" cy="48" r="5" fill="#1A1040"/>
+            <circle cx="62" cy="48" r="5" fill="#1A1040"/>
+            <ellipse cx="28" cy="58" rx="8" ry="5" fill="#FF85A2" opacity="0.6"/>
+            <ellipse cx="72" cy="58" rx="8" ry="5" fill="#FF85A2" opacity="0.6"/>
+            <path d="M 37 62 Q 50 76 63 62" stroke="#1A1040" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+          </svg>
+        </div>
+      </div>
+      <span class="brand-logo-name">해피</span>
+      <div class="brand-logo-tag">
+        <div class="live-dot" style="width:5px;height:5px;"></div>
+        <span>AI</span>
+      </div>
+    </a>
+
+    <div class="brand-center">
+      <div class="brand-mascot-wrap">
+        <div class="happi happi--lg happi--cheerful" role="img" aria-label="해피 마스코트">
+          <div class="happi__glow"></div>
+          <svg class="happi__svg" viewBox="0 0 100 100" fill="none">
+            <radialGradient id="hFaceAuth" cx="40%" cy="32%" r="70%">
+              <stop offset="0%" stop-color="#FFE566"/>
+              <stop offset="50%" stop-color="#FFB830"/>
+              <stop offset="100%" stop-color="#CC6600"/>
+            </radialGradient>
+            <circle cx="50" cy="50" r="36" fill="url(#hFaceAuth)"/>
+            <ellipse cx="40" cy="37" rx="13" ry="9" fill="#FFFFFF" opacity="0.6"/>
+            <circle cx="38" cy="48" r="6" fill="#1A1040"/>
+            <circle cx="35.5" cy="45.5" r="2" fill="#FFFFFF"/>
+            <circle cx="62" cy="48" r="6" fill="#1A1040"/>
+            <circle cx="59.5" cy="45.5" r="2" fill="#FFFFFF"/>
+            <ellipse cx="28" cy="58" rx="9" ry="6" fill="#FF85A2" opacity="0.6"/>
+            <ellipse cx="72" cy="58" rx="9" ry="6" fill="#FF85A2" opacity="0.6"/>
+            <path d="M 37 62 Q 50 76 63 62" stroke="#1A1040" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+          </svg>
+        </div>
+      </div>
+      <div class="brand-bubble">
+        <p class="bubble-title">안녕하세요!<br>저는 <em>해피</em>예요 ☀️</p>
+        <p class="bubble-sub">
+          지친 하루도, 기쁜 하루도<br>
+          무엇이든 편하게 이야기해 주세요.<br>
+          언제나 당신 편에서 들을게요.
+        </p>
+      </div>
+    </div>
+
+    <div class="brand-features">
+      <div class="feature-row">
+        <div class="feature-icon">✨</div>
+        <span>24시간 공감과 긍정 에너지를 전달해요</span>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🔒</div>
+        <span>안전하게 보호되는 나만의 대화 공간</span>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">💛</div>
+        <span>대화 기록을 언제든 꺼내볼 수 있어요</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 오른쪽 인증 카드 -->
+  <section class="auth-form-side">
+    <div class="auth-card">
+      <div class="auth-card-header">
+        <h1 class="auth-title" id="authTitle">다시 만나서 반가워요!</h1>
+        <p class="auth-desc" id="authDesc">해피와 나눈 소중한 대화를 이어가 보세요.</p>
+      </div>
+
+      <div class="auth-tabs" id="authTabs" role="tablist">
+        <button class="auth-tab-btn is-active" id="tabLogin" role="tab" type="button">로그인</button>
+        <button class="auth-tab-btn" id="tabRegister" role="tab" type="button">회원가입</button>
+      </div>
+
+      <form class="auth-form" id="authForm" novalidate>
+        <div class="field-group">
+          <label class="field-label" for="userName">아이디</label>
+          <div class="field-wrap">
+            <span class="field-icon">👤</span>
+            <input class="field-input" type="text" id="userName" name="username" placeholder="영문, 숫자 3~30자" autocomplete="username" maxlength="30">
+          </div>
+          <span class="field-error" id="nameError"></span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="userPw">비밀번호</label>
+          <div class="field-wrap">
+            <span class="field-icon">🔒</span>
+            <input class="field-input" type="password" id="userPw" name="password" placeholder="8자 이상" autocomplete="current-password" maxlength="128">
+            <button class="btn-toggle-pw" id="togglePw" type="button" aria-label="비밀번호 표시">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+          <span class="field-error" id="pwError"></span>
+        </div>
+
+        <button class="btn-auth-submit" id="submitBtn" type="submit">
+          <span id="submitLabel">로그인하기</span>
+          <div class="btn-spinner"></div>
+        </button>
+
+        <div class="auth-divider">
+          <span>또는</span>
+        </div>
+
+        <a href="/" class="btn-guest">
+          <span>둘러보기 (홈으로 이동)</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </a>
+      </form>
+    </div>
+  </section>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/static/js/auth.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.AuthModule) window.AuthModule.init();
+    });
+  </script>
+</body>
+</html>

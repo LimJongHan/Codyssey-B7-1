@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>해피 긍정봇 — 따뜻한 대화방</title>
+  <title>해피 — 긍정 대화방</title>
   <link rel="stylesheet" href="/static/css/theme.css">
   <link rel="stylesheet" href="/static/css/character.css">
   <link rel="stylesheet" href="/static/css/chat.css">
   <link rel="stylesheet" href="/static/css/auth.css">
 </head>
-<body class="is-guest">
+<body>
 
   <!-- 오프라인 안내 배너 -->
   <div class="offline-banner" id="offlineBanner" role="alert">
@@ -22,7 +22,7 @@
   <!-- 메인 챗 레이아웃 -->
   <div class="chat-layout" id="chatLayout">
 
-    <!-- 사이드바 드로어 -->
+    <!-- 사이드바 -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-head">
         <a href="/" class="sidebar-logo-link" aria-label="해피 홈으로">
@@ -106,18 +106,17 @@
 
       <!-- 채팅 피드 -->
       <section class="chat-feed" id="chatFeed">
-        <!-- 웰컴 히어로 -->
         <div class="welcome-hero" id="welcomeHero">
           <div class="welcome-mascot-wrap">
             <div class="happi happi--md happi--cheerful" role="img" aria-label="해피 마스코트">
               <div class="happi__glow"></div>
               <svg class="happi__svg" viewBox="0 0 100 100" fill="none">
-                <radialGradient id="hFaceHero" cx="40%" cy="32%" r="70%">
+                <radialGradient id="hFaceHeroChat" cx="40%" cy="32%" r="70%">
                   <stop offset="0%" stop-color="#FFE566"/>
                   <stop offset="50%" stop-color="#FFB830"/>
                   <stop offset="100%" stop-color="#CC6600"/>
                 </radialGradient>
-                <circle cx="50" cy="50" r="36" fill="url(#hFaceHero)"/>
+                <circle cx="50" cy="50" r="36" fill="url(#hFaceHeroChat)"/>
                 <ellipse cx="40" cy="37" rx="13" ry="9" fill="#FFFFFF" opacity="0.6"/>
                 <circle cx="38" cy="48" r="6" fill="#1A1040"/>
                 <circle cx="35.5" cy="45.5" r="2" fill="#FFFFFF"/>
@@ -141,7 +140,7 @@
         </div>
       </section>
 
-      <!-- 인풋독 (질문 입력창) -->
+      <!-- 인풋독 -->
       <footer class="chat-input-area">
         <form class="input-dock" id="inputDock">
           <div class="input-main-row">
@@ -169,7 +168,7 @@
     </main>
   </div>
 
-  <!-- 인증 모달 (로그인 / 회원가입) -->
+  <!-- 인증 모달 -->
   <div class="auth-modal-overlay" id="authModal">
     <div class="auth-modal-card">
       <button class="auth-modal-close" id="authModalClose" aria-label="닫기">
