@@ -74,6 +74,8 @@ uv run --env-file .env uvicorn app.main:app --reload
 
 ## SSE 채팅
 
+FastAPI의 `EventSourceResponse`와 `ServerSentEvent`를 사용한다. SSE 직렬화·응답 헤더·keep-alive는 프레임워크가 처리한다.
+
 `POST /api/rooms/{room_id}/messages/stream`에 `{"question":"오늘 힘들었어"}`를 보낸다. 로그인과 본인 소유의 기존 채팅방이 필요하다. 인증이 미구현인 현재 상태에서는 `401`이며, 자동 테스트에서만 인증 결과를 대체한다.
 
 - `delta`: `{"text":"응답 조각"}` — 화면에 이어 붙인다.

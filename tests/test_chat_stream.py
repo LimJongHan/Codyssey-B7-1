@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from app.ai.service import AIError
 from app.auth.dependencies import get_current_user
 from app.auth.schemas import User
-from app.chat.router import send_message_stream
+from app.chat.router import _load_messages, send_message_stream
 from app.chat.schemas import ChatRequest
 from app.db import connect
 from app.main import app
@@ -127,11 +127,12 @@ class ChatStreamTests(unittest.TestCase):
         async def consume():
             request = AsyncMock()
             request.is_disconnected.side_effect = [False, True]
-            response = send_message_stream(1, ChatRequest(question="안녕"),
-                                           User(id=1, username="owner"), request)
-            chunks = [chunk async for chunk in response.body_iterator]
+            body = ChatRequest(question="안녕")
+            user = User(id=1, username="owner")
+            response = send_message_stream(1, body, user, request, _load_messages(1, body, user))
+            chunks = [chunk async for chunk in response]
             self.assertEqual(len(chunks), 1)
-            self.assertIn("event: delta", chunks[0])
+            self.assertEqual(chunks[0].event, "delta")
 
         with patch("app.chat.router.stream_reply", stream):
             asyncio.run(consume())
@@ -150,10 +151,11 @@ class ChatStreamTests(unittest.TestCase):
         async def consume():
             request = AsyncMock()
             request.is_disconnected.return_value = False
-            response = send_message_stream(1, ChatRequest(question="안녕"),
-                                           User(id=1, username="owner"), request)
+            body = ChatRequest(question="안녕")
+            user = User(id=1, username="owner")
+            response = send_message_stream(1, body, user, request, _load_messages(1, body, user))
             with self.assertRaises(asyncio.CancelledError):
-                _ = [chunk async for chunk in response.body_iterator]
+                _ = [chunk async for chunk in response]
 
         with patch("app.chat.router.stream_reply", stream):
             asyncio.run(consume())

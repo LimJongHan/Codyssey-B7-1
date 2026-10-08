@@ -1,13 +1,13 @@
-import json
 import logging
 import sqlite3
+from collections.abc import AsyncIterator
 from contextlib import aclosing
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.sse import EventSourceResponse, ServerSentEvent
 
-from app.ai.service import AIError, stream_reply
+from app.ai.service import AIError, Message, stream_reply
 from app.db import connect
 from app.auth.dependencies import get_current_user
 from app.auth.schemas import User
@@ -44,12 +44,7 @@ async def send_message(room_id: int, body: ChatRequest, user: CurrentUser):
     raise HTTPException(status_code=501, detail="대화 전송 구현 예정입니다.")
 
 
-def _sse(event: str, data: dict) -> str:
-    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
-
-
-@router.post("/{room_id}/messages/stream", response_class=StreamingResponse)
-def send_message_stream(room_id: int, body: ChatRequest, user: CurrentUser, request: Request):
+def _load_messages(room_id: int, body: ChatRequest, user: CurrentUser) -> list[Message]:
     logger.info("request_received user_id=%s room_id=%s", user.id, room_id)
     try:
         with connect() as db:
@@ -74,33 +69,38 @@ def send_message_stream(room_id: int, body: ChatRequest, user: CurrentUser, requ
         ])
     messages.append({"role": "user", "content": body.question})
 
-    async def events():
-        parts = []
-        try:
-            async with aclosing(stream_reply(messages)) as stream:
-                async for text in stream:
-                    if await request.is_disconnected():
-                        return
-                    parts.append(text)
-                    yield _sse("delta", {"text": text})
-            if await request.is_disconnected():
-                return
-            with connect() as db:
-                cursor = db.execute(
-                    "INSERT INTO exchanges (room_id, question, answer) VALUES (?, ?, ?)",
-                    (room_id, body.question, "".join(parts).strip()),
-                )
-                row = db.execute("SELECT * FROM exchanges WHERE id = ?", (cursor.lastrowid,)).fetchone()
-                exchange = Exchange(**dict(row))
-            logger.info("db_save_success user_id=%s room_id=%s exchange_id=%s", user.id, room_id, exchange.id)
-            yield _sse("done", exchange.model_dump(mode="json"))
-        except AIError as error:
-            yield _sse("error", {"detail": str(error), "status_code": error.status_code})
-        except sqlite3.Error:
-            logger.error("db_save_failure user_id=%s room_id=%s", user.id, room_id)
-            yield _sse("error", {"detail": "대화를 저장하지 못했습니다.", "status_code": 500})
+    return messages
 
-    return StreamingResponse(
-        events(), media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
+
+@router.post("/{room_id}/messages/stream", response_class=EventSourceResponse)
+async def send_message_stream(
+    room_id: int,
+    body: ChatRequest,
+    user: CurrentUser,
+    request: Request,
+    messages: Annotated[list[Message], Depends(_load_messages)],
+) -> AsyncIterator[ServerSentEvent]:
+    parts = []
+    try:
+        async with aclosing(stream_reply(messages)) as stream:
+            async for text in stream:
+                if await request.is_disconnected():
+                    return
+                parts.append(text)
+                yield ServerSentEvent(event="delta", data={"text": text})
+        if await request.is_disconnected():
+            return
+        with connect() as db:
+            cursor = db.execute(
+                "INSERT INTO exchanges (room_id, question, answer) VALUES (?, ?, ?)",
+                (room_id, body.question, "".join(parts).strip()),
+            )
+            row = db.execute("SELECT * FROM exchanges WHERE id = ?", (cursor.lastrowid,)).fetchone()
+            exchange = Exchange(**dict(row))
+        logger.info("db_save_success user_id=%s room_id=%s exchange_id=%s", user.id, room_id, exchange.id)
+        yield ServerSentEvent(event="done", data=exchange)
+    except AIError as error:
+        yield ServerSentEvent(event="error", data={"detail": str(error), "status_code": error.status_code})
+    except sqlite3.Error:
+        logger.error("db_save_failure user_id=%s room_id=%s", user.id, room_id)
+        yield ServerSentEvent(event="error", data={"detail": "대화를 저장하지 못했습니다.", "status_code": 500})
