@@ -1,529 +1,562 @@
 /* ==========================================================================
-   긍정봇 해피 — 메인 대화 및 채팅방 제어 모듈
-   FastAPI 백엔드 계약 (/api/rooms/*) 및 CONTRIBUTING.md 화면 규칙 준수
+   채팅 페이지 — 상태 관리, 입력 검증, UX 인터랙션
    ========================================================================== */
-;(function (window) {
+
+;(function () {
   'use strict';
 
-  const ChatApp = {
-    currentRoomId: null,
-    rooms: [],
-    isLoading: false,
-    lastFailedQuestion: null,
-
-    init() {
-      this.bindElements();
-      this.bindEvents();
-      this.setupAutoResize();
-      this.setupCharCounter();
-      this.setupNetworkStatus();
-      this.loadRooms();
-    },
-
-    bindElements() {
-      // 레이아웃 & 사이드바
-      this.sidebar       = document.getElementById('sidebar');
-      this.sidebarToggle = document.getElementById('sidebarToggle');
-      this.sidebarClose  = document.getElementById('sidebarClose');
-      this.btnNewChat    = document.getElementById('btnNewChat');
-      this.roomList      = document.getElementById('roomList');
-      this.chatTitle     = document.getElementById('chatTitle');
-
-      // 채팅 피드
-      this.chatFeed      = document.getElementById('chatFeed');
-      this.welcomeHero   = document.getElementById('welcomeHero');
-      this.offlineBanner = document.getElementById('offlineBanner');
-      this.toastContainer = document.getElementById('toastContainer');
-
-      // 인풋독
-      this.chatForm      = document.getElementById('chatForm');
-      this.chatInput     = document.getElementById('chatInput');
-      this.btnSend       = document.getElementById('btnSend');
-      this.charCount     = document.getElementById('charCount');
-      this.inputDock     = document.getElementById('inputDock');
-
-      // 퀵칩
-      this.quickChips    = document.querySelectorAll('.chip');
-    },
-
-    bindEvents() {
-      // 사이드바 토글
-      this.sidebarToggle?.addEventListener('click', () => {
-        this.sidebar?.classList.toggle('is-open');
-      });
-      this.sidebarClose?.addEventListener('click', () => {
-        this.sidebar?.classList.remove('is-open');
-      });
-
-      // 새 대화 시작
-      this.btnNewChat?.addEventListener('click', () => {
-        this.createNewRoom();
-      });
-
-      // 폼 제출 (메시지 전송)
-      this.chatForm?.addEventListener('submit', (e) => {
-        e.preventDefault();
-        this.sendMessage();
-      });
-
-      // 텍스트 영역 키보드 입력 (Enter = 전송, Shift+Enter = 줄바꿈)
-      this.chatInput?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          this.sendMessage();
-        }
-      });
-
-      // 퀵칩 클릭 시 전송
-      this.quickChips?.forEach((chip) => {
-        chip.addEventListener('click', () => {
-          const text = chip.getAttribute('data-prompt') || chip.textContent.trim();
-          if (this.chatInput) {
-            this.chatInput.value = text;
-            this.updateCharCount();
-            this.sendMessage();
-          }
-        });
-      });
-    },
-
-    /* ==========================================================================
-       네트워크 & 토스트 안내
-       ========================================================================== */
-    setupNetworkStatus() {
-      const updateNet = () => {
-        if (!navigator.onLine) {
-          this.offlineBanner?.classList.add('is-visible');
-          this.setInputDisabled(true);
-        } else {
-          this.offlineBanner?.classList.remove('is-visible');
-          if (!this.isLoading) this.setInputDisabled(false);
-        }
-      };
-
-      window.addEventListener('online', () => {
-        updateNet();
-        this.showToast('인터넷이 다시 연결되었습니다. ☀️', 'success');
-      });
-      window.addEventListener('offline', () => {
-        updateNet();
-        this.showToast('네트워크 연결이 끊겼습니다.', 'error');
-      });
-      updateNet();
-    },
-
-    showToast(msg, type = 'info', duration = 3500) {
-      if (!this.toastContainer) return;
-      const icons = { error: '⚠️', success: '✅', warn: '💛', info: '☀️' };
-      const el = document.createElement('div');
-      el.className = `toast toast--${type}`;
-      el.innerHTML = `<span>${icons[type] || '☀️'}</span><span>${msg}</span>`;
-      this.toastContainer.appendChild(el);
-      setTimeout(() => {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(-8px)';
-        setTimeout(() => el.remove(), 300);
-      }, duration);
-    },
-
-    /* ==========================================================================
-       입력창 자동 높이 조절 & 글자 수 카운터 (2,000자 제한)
-       ========================================================================== */
-    setupAutoResize() {
-      if (!this.chatInput) return;
-      this.chatInput.addEventListener('input', () => {
-        this.chatInput.style.height = 'auto';
-        const newHeight = Math.min(this.chatInput.scrollHeight, 180);
-        this.chatInput.style.height = `${newHeight}px`;
-      });
-    },
-
-    setupCharCounter() {
-      this.chatInput?.addEventListener('input', () => this.updateCharCount());
-      this.updateCharCount();
-    },
-
-    updateCharCount() {
-      if (!this.chatInput || !this.charCount) return;
-      const len = this.chatInput.value.length;
-      this.charCount.textContent = `${len.toLocaleString()} / 2,000`;
-
-      this.charCount.classList.remove('is-warn', 'is-limit');
-      if (len >= 1950) {
-        this.charCount.classList.add('is-limit');
-      } else if (len >= 1800) {
-        this.charCount.classList.add('is-warn');
-      }
-    },
-
-    setInputDisabled(disabled) {
-      if (this.chatInput) this.chatInput.disabled = disabled;
-      if (this.btnSend) this.btnSend.disabled = disabled;
-    },
-
-    setLoading(loading) {
-      this.isLoading = loading;
-      this.setInputDisabled(loading);
-      if (this.btnSend) {
-        this.btnSend.classList.toggle('is-loading', loading);
-      }
-    },
-
-    /* ==========================================================================
-       방(Room) 목록 및 생성
-       ========================================================================== */
-    async loadRooms() {
-      try {
-        const res = await fetch('/api/rooms', {
-          headers: { 'Accept': 'application/json' },
-          credentials: 'same-origin'
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          this.rooms = Array.isArray(data) ? data : [];
-          this.renderRoomList();
-          if (this.rooms.length > 0 && !this.currentRoomId) {
-            this.selectRoom(this.rooms[0].id);
-          }
-        } else if (res.status === 401) {
-          // 비로그인 상태일 때 임시 로컬 방 구성
-          this.rooms = [{ id: 'guest', title: '오늘의 대화 (게스트)' }];
-          this.renderRoomList();
-          this.selectRoom('guest');
-        } else if (res.status === 501) {
-          // 백엔드 미구현 시
-          this.rooms = [{ id: 'mock', title: '해피와의 긍정 대화' }];
-          this.renderRoomList();
-          this.selectRoom('mock');
-        }
-      } catch (err) {
-        // 오프라인이거나 초기 로컬 구동 시
-        this.rooms = [{ id: 'local', title: '따뜻한 일상 대화' }];
-        this.renderRoomList();
-        this.selectRoom('local');
-      }
-    },
-
-    renderRoomList() {
-      if (!this.roomList) return;
-      this.roomList.innerHTML = '';
-
-      this.rooms.forEach((r) => {
-        const li = document.createElement('li');
-        li.className = `chat-item ${r.id === this.currentRoomId ? 'is-active' : ''}`;
-        li.setAttribute('data-id', r.id);
-
-        const emoji = document.createElement('span');
-        emoji.className = 'chat-emoji';
-        emoji.textContent = '☀️';
-
-        const title = document.createElement('span');
-        title.className = 'chat-title';
-        title.textContent = r.title || '새 대화';
-
-        li.appendChild(emoji);
-        li.appendChild(title);
-
-        li.addEventListener('click', () => {
-          this.selectRoom(r.id);
-          this.sidebar?.classList.remove('is-open');
-        });
-
-        this.roomList.appendChild(li);
-      });
-    },
-
-    async createNewRoom() {
-      if (!window.AuthModule?.currentUser) {
-        window.AuthModule?.openModal();
-        this.showToast('새 대화방을 만들려면 로그인이 필요합니다.', 'warn');
-        return;
-      }
-
-      try {
-        const res = await fetch('/api/rooms', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({ title: '새로운 긍정 대화' }),
-          credentials: 'same-origin'
-        });
-
-        if (res.ok) {
-          const newRoom = await res.json();
-          this.rooms.unshift(newRoom);
-          this.renderRoomList();
-          this.selectRoom(newRoom.id);
-          this.clearChatFeed();
-          this.showToast('새로운 대화방이 생성되었습니다.', 'success');
-        } else if (res.status === 401) {
-          window.AuthModule?.openModal();
-        } else {
-          this.showToast('대화방 생성에 실패했습니다.', 'error');
-        }
-      } catch (e) {
-        this.showToast('네트워크 오류가 발생했습니다.', 'error');
-      }
-    },
-
-    async selectRoom(roomId) {
-      this.currentRoomId = roomId;
-      this.renderRoomList();
-      const room = this.rooms.find((r) => r.id === roomId);
-      if (this.chatTitle && room) {
-        this.chatTitle.textContent = room.title;
-      }
-
-      if (roomId === 'guest' || roomId === 'mock' || roomId === 'local') {
-        return;
-      }
-
-      // 메시지 목록 불러오기
-      try {
-        const res = await fetch(`/api/rooms/${roomId}/messages`, {
-          headers: { 'Accept': 'application/json' },
-          credentials: 'same-origin'
-        });
-        if (res.ok) {
-          const messages = await res.json();
-          this.clearChatFeed();
-          if (Array.isArray(messages) && messages.length > 0) {
-            this.hideWelcomeHero();
-            messages.forEach((ex) => {
-              this.appendMessage('user', ex.question);
-              this.appendMessage('bot', ex.answer);
-            });
-          } else {
-            this.showWelcomeHero();
-          }
-        }
-      } catch (e) {
-        // 실패 시 유지
-      }
-    },
-
-    clearChatFeed() {
-      if (!this.chatFeed) return;
-      const bubbles = this.chatFeed.querySelectorAll('.msg-row');
-      bubbles.forEach((b) => b.remove());
-      this.showWelcomeHero();
-    },
-
-    showWelcomeHero() {
-      if (this.welcomeHero) this.welcomeHero.style.display = 'flex';
-    },
-
-    hideWelcomeHero() {
-      if (this.welcomeHero) this.welcomeHero.style.display = 'none';
-    },
-
-    /* ==========================================================================
-       메시지 전송 및 상태 UX (로딩, 오류, 재시도, textContent 렌더링)
-       ========================================================================== */
-    async sendMessage(retryText = null) {
-      if (this.isLoading) return;
-
-      const rawText = retryText !== null ? retryText : (this.chatInput?.value ?? '');
-      const question = rawText.trim();
-
-      // 1. 빈 값 검증
-      if (!question) {
-        this.inputDock?.classList.add('shake');
-        setTimeout(() => this.inputDock?.classList.remove('shake'), 400);
-        this.showToast('메시지를 입력해 주세요.', 'warn');
-        return;
-      }
-
-      // 2. 길이 검증 (2,000자 초과)
-      if (question.length > 2000) {
-        this.showToast('질문은 2,000자 이내로 입력해 주세요.', 'error');
-        return;
-      }
-
-      // 입력창 초기화
-      if (this.chatInput && retryText === null) {
-        this.chatInput.value = '';
-        this.chatInput.style.height = 'auto';
-        this.updateCharCount();
-      }
-
-      this.hideWelcomeHero();
-      this.appendMessage('user', question);
-      this.setLoading(true);
-
-      // 로딩 스피너 말풍선 노출 ("해피가 생각하고 있어요...")
-      const typingIndicator = this.appendTypingIndicator();
-
-      try {
-        const roomId = this.currentRoomId || 1;
-        const res = await fetch(`/api/rooms/${roomId}/messages`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({ question }),
-          credentials: 'same-origin',
-          signal: AbortSignal.timeout(30_000)
-        });
-
-        typingIndicator.remove();
-
-        if (res.ok) {
-          const exchange = await res.json();
-          // 보안 규칙 준수: AI 응답은 반드시 textContent로 렌더링 (CONTRIBUTING.md 준수)
-          this.appendMessage('bot', exchange.answer);
-          this.lastFailedQuestion = null;
-        } else if (res.status === 401) {
-          this.appendErrorMessage('로그인한 사용자만 대화할 수 있어요. 로그인 후 이용해 주세요.', question);
-          window.AuthModule?.openModal();
-        } else if (res.status === 422) {
-          this.appendErrorMessage('질문 형식이 올바르지 않습니다. (1~2,000자 이내)', question);
-        } else if (res.status === 502 || res.status === 504) {
-          this.appendErrorMessage('해피가 답변을 생각하는 데 시간이 걸리고 있어요. 잠시 후 다시 시도해 주세요.', question, true);
-        } else if (res.status === 501) {
-          // 백엔드가 아직 501(미구현) 상태인 경우 개발용 친절한 긍정 답변 목업 제공
-          const demoReplies = [
-            `"${question}"라고 말씀해주셨군요! 항상 당신의 곁에서 응원하고 있어요. 힘내세요! ☀️`,
-            `오늘 하루도 정말 고생 많으셨어요. 당신은 그 자체로 빛나는 소중한 존재예요. ✨`,
-            `마음이 한결 편안해지셨으면 좋겠어요. 언제든 해피에게 또 이야기해 주세요! 💛`
-          ];
-          const reply = demoReplies[Math.floor(Math.random() * demoReplies.length)];
-          this.appendMessage('bot', reply);
-        } else {
-          const data = await res.json().catch(() => ({}));
-          this.appendErrorMessage(data.detail || '응답을 받아오지 못했습니다.', question, true);
-        }
-      } catch (err) {
-        typingIndicator.remove();
-        if (err.name === 'TimeoutError') {
-          this.appendErrorMessage('응답 대기 시간이 초과되었습니다.', question, true);
-        } else if (!navigator.onLine) {
-          this.appendErrorMessage('네트워크 연결이 끊겼습니다.', question, true);
-        } else {
-          this.appendErrorMessage('일시적인 연결 오류가 발생했습니다.', question, true);
-        }
-      } finally {
-        this.setLoading(false);
-        this.scrollToBottom();
-      }
-    },
-
-    /* ==========================================================================
-       말풍선 DOM 렌더링 (XSS 방지: textContent 강제 적용)
-       ========================================================================== */
-    appendMessage(role, text) {
-      if (!this.chatFeed) return;
-
-      const row = document.createElement('div');
-      row.className = `msg-row msg-row--${role}`;
-
-      if (role === 'bot') {
-        const avatar = document.createElement('div');
-        avatar.className = 'msg-avatar';
-        avatar.innerHTML = `
-          <div class="happi happi--icon" role="img" aria-label="해피">
-            <svg class="happi__svg" viewBox="0 0 100 100" fill="none">
-              <circle cx="50" cy="50" r="40" fill="#FFB830"/>
-              <circle cx="38" cy="48" r="5" fill="#1A1040"/>
-              <circle cx="62" cy="48" r="5" fill="#1A1040"/>
-              <path d="M 38 60 Q 50 72 62 60" stroke="#1A1040" stroke-width="3" stroke-linecap="round" fill="none"/>
-            </svg>
-          </div>
-        `;
-        row.appendChild(avatar);
-      }
-
-      const bubble = document.createElement('div');
-      bubble.className = `msg-bubble msg-bubble--${role}`;
-
-      // XSS 방지: CONTRIBUTING.md 규칙대로 textContent 사용
-      const textSpan = document.createElement('p');
-      textSpan.className = 'msg-text';
-      textSpan.textContent = text;
-      bubble.appendChild(textSpan);
-
-      const timeSpan = document.createElement('span');
-      timeSpan.className = 'msg-time';
-      const now = new Date();
-      timeSpan.textContent = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-      bubble.appendChild(timeSpan);
-
-      row.appendChild(bubble);
-      this.chatFeed.appendChild(row);
-      this.scrollToBottom();
-      return row;
-    },
-
-    appendTypingIndicator() {
-      const row = document.createElement('div');
-      row.className = 'msg-row msg-row--bot msg-typing';
-
-      const avatar = document.createElement('div');
-      avatar.className = 'msg-avatar';
-      avatar.innerHTML = `
-        <div class="happi happi--icon">
-          <svg class="happi__svg" viewBox="0 0 100 100" fill="none">
-            <circle cx="50" cy="50" r="40" fill="#FFB830"/>
-            <path d="M 38 60 Q 50 72 62 60" stroke="#1A1040" stroke-width="3" stroke-linecap="round" fill="none"/>
-          </svg>
-        </div>
-      `;
-      row.appendChild(avatar);
-
-      const bubble = document.createElement('div');
-      bubble.className = 'msg-bubble msg-bubble--bot msg-bubble--typing';
-      bubble.innerHTML = `
-        <span class="typing-label">해피가 생각하는 중이에요</span>
-        <div class="typing-dots">
-          <span></span><span></span><span></span>
-        </div>
-      `;
-      row.appendChild(bubble);
-
-      this.chatFeed?.appendChild(row);
-      this.scrollToBottom();
-      return row;
-    },
-
-    appendErrorMessage(errorText, retryQuestion, showRetry = false) {
-      if (!this.chatFeed) return;
-
-      const row = document.createElement('div');
-      row.className = 'msg-row msg-row--bot msg-row--error';
-
-      const bubble = document.createElement('div');
-      bubble.className = 'msg-bubble msg-bubble--error';
-
-      const errP = document.createElement('p');
-      errP.className = 'msg-error-text';
-      errP.textContent = `⚠️ ${errorText}`;
-      bubble.appendChild(errP);
-
-      if (showRetry && retryQuestion) {
-        const btnRetry = document.createElement('button');
-        btnRetry.className = 'btn-retry';
-        btnRetry.textContent = '다시 시도 ↻';
-        btnRetry.addEventListener('click', () => {
-          row.remove();
-          this.sendMessage(retryQuestion);
-        });
-        bubble.appendChild(btnRetry);
-      }
-
-      row.appendChild(bubble);
-      this.chatFeed.appendChild(row);
-      this.scrollToBottom();
-    },
-
-    scrollToBottom() {
-      if (!this.chatFeed) return;
-      this.chatFeed.scrollTop = this.chatFeed.scrollHeight;
+  /* ==========================================================================
+     상수
+     ========================================================================== */
+  const MAX_CHARS      = 2000;
+  const WARN_CHARS     = 1800; // 경고 시작
+  const DANGER_CHARS   = 1950; // 위험 표시
+  const GUEST_LIMIT    = 5;    // 게스트 최대 대화 횟수
+  const RETRY_DELAY    = 1200; // 재시도 최소 간격(ms)
+
+  /* ==========================================================================
+     DOM 참조
+     ========================================================================== */
+  const layout          = document.getElementById('chatLayout');
+  const sidebar         = document.getElementById('sidebar');
+  const backdrop        = document.getElementById('sidebarBackdrop');
+  const btnToggle       = document.getElementById('btnToggle');
+  const sidebarClose    = document.getElementById('sidebarClose');
+  const btnNewChat      = document.getElementById('btnNewChat');
+  const offlineBanner   = document.getElementById('offlineBanner');
+  const guestLimitBanner= document.getElementById('guestLimitBanner');
+  const chatFeed        = document.getElementById('chatFeed');
+  const feedInner       = document.getElementById('feedInner');
+  const welcomeBanner   = document.getElementById('welcomeBanner');
+  const msgList         = document.getElementById('msgList');
+  const typingRow       = document.getElementById('typingRow');
+  const chatForm        = document.getElementById('chatForm');
+  const msgInput        = document.getElementById('msgInput');
+  const btnSend         = document.getElementById('btnSend');
+  const charCounter     = document.getElementById('charCounter');
+  const inputError      = document.getElementById('inputError');
+  const statusTxt       = document.getElementById('statusTxt');
+  const liveStatus      = document.getElementById('liveStatus');
+  const headerTitle     = document.getElementById('headerTitle');
+  const toastContainer  = document.getElementById('toastContainer');
+
+  /* ==========================================================================
+     상태
+     ========================================================================== */
+  let isSending    = false;
+  let isCollapsed  = false;
+  let guestCount   = parseInt(sessionStorage.getItem('happi_guest_count') || '0', 10);
+  let lastRetryTime= 0;
+
+  /* ==========================================================================
+     토스트 알림 시스템
+     ========================================================================== */
+  function showToast (msg, type = 'info', duration = 3500) {
+    if (!toastContainer) return;
+
+    const icons = {
+      error:   '⚠️',
+      success: '✅',
+      warn:    '💛',
+      info:    '☀️',
+    };
+
+    const el = document.createElement('div');
+    el.className = `toast toast--${type}`;
+    el.innerHTML = `<span>${icons[type] ?? '💬'}</span><span>${msg}</span>`;
+    toastContainer.appendChild(el);
+
+    setTimeout(() => {
+      el.style.animation = 'toast-out 0.3s ease forwards';
+      setTimeout(() => el.remove(), 280);
+    }, duration);
+  }
+
+  /* ==========================================================================
+     오프라인 감지
+     ========================================================================== */
+  function syncOnline () {
+    const offline = !navigator.onLine;
+    offlineBanner?.classList.toggle('is-visible', offline);
+    if (offline) {
+      setStatus('연결 끊김', '#FF6B8A');
+      showToast('인터넷 연결이 끊겼습니다.', 'error');
+    } else {
+      setStatus('해피가 귀 기울여 듣고 있어요', '');
     }
+  }
+
+  window.addEventListener('online',  syncOnline);
+  window.addEventListener('offline', syncOnline);
+  syncOnline();
+
+  function setStatus (txt, color) {
+    if (!statusTxt) return;
+    statusTxt.textContent = txt;
+    if (color && liveStatus) {
+      liveStatus.style.background  = color;
+      liveStatus.style.boxShadow   = `0 0 8px ${color}`;
+    } else if (liveStatus) {
+      liveStatus.style.background  = '';
+      liveStatus.style.boxShadow   = '';
+    }
+  }
+
+  /* ==========================================================================
+     사이드바 토글
+     ========================================================================== */
+  function openSidebar () {
+    if (window.innerWidth <= 768) {
+      layout.classList.add('sidebar-open');
+    } else {
+      layout.classList.remove('sidebar-collapsed');
+      isCollapsed = false;
+    }
+  }
+
+  function closeSidebar () {
+    if (window.innerWidth <= 768) {
+      layout.classList.remove('sidebar-open');
+    } else {
+      layout.classList.add('sidebar-collapsed');
+      isCollapsed = true;
+    }
+  }
+
+  btnToggle?.addEventListener('click', () => {
+    window.innerWidth <= 768
+      ? (layout.classList.contains('sidebar-open') ? closeSidebar() : openSidebar())
+      : (isCollapsed ? openSidebar() : closeSidebar());
+  });
+  sidebarClose?.addEventListener('click', closeSidebar);
+  backdrop?.addEventListener('click', closeSidebar);
+
+  /* ==========================================================================
+     채팅 목록 인터랙션
+     ========================================================================== */
+  document.querySelectorAll('.chat-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      if (e.target.closest('.item-actions')) return;
+      document.querySelectorAll('.chat-item').forEach(c => c.classList.remove('is-active'));
+      item.classList.add('is-active');
+      const title = item.querySelector('.chat-title')?.textContent;
+      if (headerTitle && title) headerTitle.textContent = title;
+      if (window.innerWidth <= 768) closeSidebar();
+    });
+  });
+
+  document.querySelectorAll('.btn-item-act').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const { action } = btn.dataset;
+      const item = btn.closest('.chat-item');
+      if (action === 'fav') {
+        btn.classList.toggle('fav-on');
+        btn.title = btn.classList.contains('fav-on') ? '즐겨찾기 해제' : '즐겨찾기';
+      } else if (action === 'delete') {
+        item.style.transition = 'all 0.22s ease';
+        item.style.opacity = '0';
+        item.style.height  = item.offsetHeight + 'px';
+        setTimeout(() => {
+          item.style.height  = '0';
+          item.style.padding = '0';
+          item.style.overflow = 'hidden';
+          setTimeout(() => item.remove(), 200);
+        }, 120);
+      }
+    });
+  });
+
+  /* 새 대화 */
+  btnNewChat?.addEventListener('click', () => {
+    document.querySelectorAll('.chat-item').forEach(c => c.classList.remove('is-active'));
+    if (msgList) msgList.innerHTML = '';
+    if (welcomeBanner) welcomeBanner.style.display = '';
+    if (headerTitle) headerTitle.textContent = '새로운 대화 ✨';
+    msgInput?.focus();
+    if (window.innerWidth <= 768) closeSidebar();
+  });
+
+  /* ==========================================================================
+     퀵 칩
+     ========================================================================== */
+  document.querySelectorAll('.q-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const prompt = chip.dataset.prompt;
+      if (prompt && msgInput) {
+        msgInput.value = prompt;
+        adjustTextarea();
+        syncSendButton();
+        msgInput.focus();
+      }
+    });
+  });
+
+  /* ==========================================================================
+     텍스트에리어 자동 높이 & 글자수 카운터
+     ========================================================================== */
+  function adjustTextarea () {
+    if (!msgInput) return;
+    msgInput.style.height = 'auto';
+    msgInput.style.height = Math.min(msgInput.scrollHeight, 140) + 'px';
+  }
+
+  function syncSendButton () {
+    if (!msgInput || !btnSend || !charCounter) return;
+
+    const len = msgInput.value.length;
+    const trimmed = msgInput.value.trim();
+
+    // 글자수 카운터
+    charCounter.textContent = `${len} / ${MAX_CHARS}`;
+    charCounter.classList.toggle('is-warning', len >= WARN_CHARS && len < DANGER_CHARS);
+    charCounter.classList.toggle('is-danger',  len >= DANGER_CHARS);
+
+    // 에러 메시지
+    if (len > MAX_CHARS) {
+      showInputError(`최대 ${MAX_CHARS}자까지 입력할 수 있습니다.`);
+      btnSend.disabled = true;
+      return;
+    }
+    clearInputError();
+
+    // 빈 입력 검사
+    btnSend.disabled = trimmed.length === 0 || isSending || !navigator.onLine;
+  }
+
+  function showInputError (msg) {
+    if (!inputError) return;
+    inputError.textContent = msg;
+    inputError.classList.add('is-visible');
+  }
+
+  function clearInputError () {
+    if (!inputError) return;
+    inputError.textContent = '';
+    inputError.classList.remove('is-visible');
+  }
+
+  msgInput?.addEventListener('input', () => {
+    adjustTextarea();
+    syncSendButton();
+  });
+
+  // Enter 전송 / Shift+Enter 줄바꿈
+  msgInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (!btnSend.disabled) chatForm.requestSubmit();
+    }
+  });
+
+  // 감정 태그
+  document.querySelectorAll('.btn-emotion').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tag = btn.dataset.e;
+      if (msgInput) {
+        const val = msgInput.value.trim();
+        const newVal = val ? `[${tag}] ${val}` : `[${tag}] `;
+        if (newVal.length <= MAX_CHARS) {
+          msgInput.value = newVal;
+          adjustTextarea();
+          syncSendButton();
+        }
+        msgInput.focus();
+      }
+    });
+  });
+
+  /* ==========================================================================
+     메시지 렌더링
+     ========================================================================== */
+  const nowStr = () => {
+    const d = new Date();
+    const h = d.getHours();
+    const m = String(d.getMinutes()).padStart(2, '0');
+    return `오${h < 12 ? '전' : '후'} ${h < 13 ? h : h - 12}:${m}`;
   };
 
-  window.ChatApp = ChatApp;
-})(window);
+  const escHtml = s => s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
+
+  /* 봇 아바타 인라인 SVG (컴포넌트 의존 없이 재사용) */
+  const botAvatarSVG = `
+    <div class="happi happi--sm happi--cheerful" role="img" aria-label="해피">
+      <div class="happi__glow"></div>
+      <svg class="happi__svg" viewBox="0 0 100 100" fill="none"
+           xmlns="http://www.w3.org/2000/svg" overflow="visible">
+        <defs>
+          <radialGradient id="hFace_js" cx="40%" cy="32%" r="70%">
+            <stop offset="0%"  stop-color="#FFE566"/>
+            <stop offset="50%" stop-color="#FFB830"/>
+            <stop offset="85%" stop-color="#F08A00"/>
+            <stop offset="100%" stop-color="#CC6600"/>
+          </radialGradient>
+          <filter id="hShad_js" x="-25%" y="-15%" width="155%" height="150%">
+            <feDropShadow dx="0" dy="4" stdDeviation="8"
+              flood-color="#FF8800" flood-opacity="0.35"/>
+          </filter>
+        </defs>
+        <g filter="url(#hShad_js)">
+          <circle cx="50" cy="50" r="36" fill="url(#hFace_js)"/>
+        </g>
+        <ellipse cx="40" cy="37" rx="13" ry="9" fill="white" fill-opacity="0.55"
+                 transform="rotate(-18 40 37)"/>
+        <g class="happi__eyes">
+          <g><circle cx="38" cy="48" r="6" fill="#1A1040"/>
+             <circle cx="35.5" cy="45.5" r="2" fill="white"/></g>
+          <g><circle cx="62" cy="48" r="6" fill="#1A1040"/>
+             <circle cx="59.5" cy="45.5" r="2" fill="white"/></g>
+        </g>
+        <path d="M 37 62 Q 50 76 63 62"
+              stroke="#1A1040" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+      </svg>
+    </div>`;
+
+  function appendMsg (text, role, extra = {}) {
+    if (welcomeBanner) welcomeBanner.style.display = 'none';
+
+    const row = document.createElement('div');
+    row.className = `msg-row msg-row--${role}`;
+
+    const timeStr = nowStr();
+
+    if (role === 'bot') {
+      row.innerHTML = `
+        <div class="msg-av">${botAvatarSVG}</div>
+        <div class="msg-col">
+          <span class="msg-sender">해피</span>
+          <div class="msg-bubble"></div>
+          <span class="msg-time">${timeStr}</span>
+        </div>`;
+      row.querySelector('.msg-bubble').textContent = text;
+    } else if (role === 'error') {
+      const retryData = extra.retryText ? `data-retry="${escHtml(extra.retryText)}"` : '';
+      row.innerHTML = `
+        <div class="msg-av">${botAvatarSVG}</div>
+        <div class="msg-col">
+          <div class="msg-bubble">
+            <span class="err-txt"></span>
+            ${retryData ? `<button class="btn-retry" ${retryData}>다시 시도</button>` : ''}
+          </div>
+        </div>`;
+      row.querySelector('.err-txt').textContent = `⚠️ ${text}`;
+
+      // 재시도 버튼 이벤트
+      const retryBtn = row.querySelector('.btn-retry');
+      retryBtn?.addEventListener('click', () => {
+        const now = Date.now();
+        if (now - lastRetryTime < RETRY_DELAY) {
+          showToast('잠시 후 다시 시도해 주세요.', 'warn', 2000);
+          return;
+        }
+        lastRetryTime = now;
+        row.remove();
+        sendMessage(retryBtn.dataset.retry);
+      });
+    } else {
+      // user
+      row.innerHTML = `
+        <div class="msg-col">
+          <div class="msg-bubble"></div>
+          <span class="msg-time">${timeStr}</span>
+        </div>`;
+      row.querySelector('.msg-bubble').textContent = text;
+    }
+
+    msgList.appendChild(row);
+    scrollFeed();
+    return row;
+  }
+
+  function scrollFeed () {
+    requestAnimationFrame(() => { chatFeed.scrollTop = chatFeed.scrollHeight; });
+  }
+
+  /* ==========================================================================
+     로딩 상태 관리
+     ========================================================================== */
+  function setLoading (on) {
+    isSending = on;
+    if (typingRow)    typingRow.style.display    = on ? 'flex' : 'none';
+    if (btnSend)      btnSend.classList.toggle('is-loading', on);
+    if (chatForm)     chatForm.classList.toggle('is-disabled', on);
+    if (msgInput)     msgInput.disabled = on;
+
+    if (on) {
+      setStatus('해피가 생각하는 중이에요...', 'var(--gold)');
+      scrollFeed();
+    } else {
+      setStatus('해피가 귀 기울여 듣고 있어요', '');
+      syncSendButton();
+      msgInput?.focus();
+    }
+  }
+
+  /* ==========================================================================
+     API 호출
+     ========================================================================== */
+  async function sendMessage (text) {
+    if (!text || isSending || !navigator.onLine) return;
+
+    appendMsg(text, 'user');
+    setLoading(true);
+
+    // 게스트 카운터 증가
+    guestCount++;
+    sessionStorage.setItem('happi_guest_count', String(guestCount));
+
+    // 게스트 제한 배너 표시
+    if (guestLimitBanner && guestCount >= GUEST_LIMIT) {
+      guestLimitBanner.classList.add('is-visible');
+    }
+
+    try {
+      // 1. 활성 방 ID 확인 (기본값 1, 또는 팀 백엔드 방 생성)
+      let roomId = sessionStorage.getItem('happi_active_room_id') || '1';
+
+      // 2. 팀 백엔드 규격: POST /api/rooms/{room_id}/messages with {"question": text}
+      // 또는 폴백 호환: POST /api/chat with {"message": text}
+      let res;
+      try {
+        res = await fetch(`/api/rooms/${roomId}/messages`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body:    JSON.stringify({ question: text }),
+          credentials: 'same-origin',
+          signal:  AbortSignal.timeout(30_000),
+        });
+
+        // 만약 404(방 없음)이면 새 방 생성 시도 후 재전송
+        if (res.status === 404) {
+          const createRoomRes = await fetch('/api/rooms', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ title: '오늘의 대화' }),
+            credentials: 'same-origin'
+          });
+          if (createRoomRes.ok) {
+            const newRoom = await createRoomRes.json();
+            roomId = String(newRoom.id);
+            sessionStorage.setItem('happi_active_room_id', roomId);
+            res = await fetch(`/api/rooms/${roomId}/messages`, {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              body:    JSON.stringify({ question: text }),
+              credentials: 'same-origin',
+              signal:  AbortSignal.timeout(30_000),
+            });
+          }
+        }
+      } catch (networkErr) {
+        // 백엔드 엔드포인트 실패 시 /api/chat으로 안전 폴백
+        res = await fetch('/api/chat', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ message: text }),
+          signal:  AbortSignal.timeout(30_000),
+        });
+      }
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          appendMsg(
+            '로그인이 필요한 기능이에요. 로그인 후 이용해 주세요.',
+            'error',
+            {}
+          );
+          showToast('로그인이 필요합니다.', 'warn');
+        } else if (res.status === 422) {
+          appendMsg('질문 형식이 올바르지 않습니다. (1~2,000자 이내)', 'error', { retryText: text });
+          showToast('입력 형식을 확인해 주세요.', 'warn');
+        } else if (res.status === 502 || res.status === 504) {
+          appendMsg('AI 서비스 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.', 'error', { retryText: text });
+          showToast('AI 응답 지연', 'warn');
+        } else {
+          appendMsg('일시적인 오류가 발생했습니다. 다시 시도해 주세요.', 'error', { retryText: text });
+        }
+        return;
+      }
+
+      const data = await res.json();
+      // 팀 규격 Exchange의 answer 또는 호환 reply 수신
+      const reply = data?.answer || data?.reply
+        || '오늘 하루도 정말 고생 많으셨어요. 당신의 곁에서 항상 응원할게요! ☀️';
+      appendMsg(reply, 'bot');
+
+    } catch (err) {
+      if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+        appendMsg('응답 시간이 너무 걸렸어요. 다시 시도해 주세요.', 'error', { retryText: text });
+        showToast('응답 시간 초과. 재시도를 눌러주세요.', 'error');
+      } else if (!navigator.onLine) {
+        appendMsg('인터넷 연결이 끊겼어요. 연결 확인 후 재시도해 주세요.', 'error', { retryText: text });
+      } else {
+        appendMsg('일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.', 'error', { retryText: text });
+        showToast('오류가 발생했습니다.', 'error');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /* ==========================================================================
+     폼 제출 (입력 검증 포함)
+     ========================================================================== */
+  chatForm?.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    // ── 검증 게이트 ──
+    const raw  = msgInput?.value ?? '';
+    const text = raw.trim();
+
+    // 1) 빈 입력
+    if (!text) {
+      showInputError('메시지를 입력해 주세요.');
+      msgInput?.focus();
+      return;
+    }
+
+    // 2) 길이 초과
+    if (raw.length > MAX_CHARS) {
+      showInputError(`최대 ${MAX_CHARS}자까지 입력할 수 있습니다.`);
+      return;
+    }
+
+    // 3) 오프라인
+    if (!navigator.onLine) {
+      showToast('인터넷 연결을 확인해 주세요.', 'error');
+      return;
+    }
+
+    // 4) 중복 전송 방지
+    if (isSending) return;
+
+    clearInputError();
+    msgInput.value = '';
+    adjustTextarea();
+    syncSendButton();
+
+    sendMessage(text);
+  });
+
+  /* ==========================================================================
+     auth.js 입력 검증
+     ========================================================================== */
+  const togglePw = document.getElementById('togglePw');
+  const pwInput  = document.getElementById('userPw');
+
+  if (togglePw && pwInput) {
+    togglePw.addEventListener('click', () => {
+      const show = pwInput.type === 'password';
+      pwInput.type = show ? 'text' : 'password';
+      togglePw.style.color = show ? 'var(--gold)' : '';
+    });
+  }
+
+  /* 초기 상태 동기화 */
+  syncSendButton();
+
+})();

@@ -1,303 +1,272 @@
 /* ==========================================================================
-   긍정봇 해피 — 인증(로그인 / 회원가입) 모듈
-   FastAPI 백엔드 계약 (/api/auth/*) 준수
+   로그인 / 회원가입 — 입력 검증 & UX 인터랙션
    ========================================================================== */
-;(function (window) {
+;(function () {
   'use strict';
 
-  const Auth = {
-    currentUser: null,
+  /* ==========================================================================
+     DOM
+     ========================================================================== */
+  const authTabs     = document.getElementById('authTabs');
+  const tabLogin     = document.getElementById('tabLogin');
+  const tabRegister  = document.getElementById('tabRegister');
+  const authForm     = document.getElementById('authForm');
+  const nameField    = document.getElementById('nameField');
+  const userEmail    = document.getElementById('userEmail');
+  const userPw       = document.getElementById('userPw');
+  const userName     = document.getElementById('userName');
+  const submitBtn    = document.getElementById('submitBtn');
+  const submitLabel  = document.getElementById('submitLabel');
+  const togglePw     = document.getElementById('togglePw');
+  const authTitle    = document.getElementById('authTitle');
+  const authDesc     = document.getElementById('authDesc');
+  const toastCont    = document.getElementById('toastContainer');
 
-    init() {
-      this.bindElements();
-      this.bindEvents();
-      this.checkSession();
-    },
+  // 에러 span
+  const emailErr = document.getElementById('emailError');
+  const pwErr    = document.getElementById('pwError');
+  const nameErr  = document.getElementById('nameError');
 
-    bindElements() {
-      this.authModal   = document.getElementById('authModal');
-      this.authTabs    = document.getElementById('authTabs');
-      this.tabLogin    = document.getElementById('tabLogin');
-      this.tabRegister = document.getElementById('tabRegister');
-      this.authForm    = document.getElementById('authForm');
-      this.userName    = document.getElementById('userName');
-      this.userPw      = document.getElementById('userPw');
-      this.submitBtn   = document.getElementById('submitBtn');
-      this.submitLabel = document.getElementById('submitLabel');
-      this.togglePw    = document.getElementById('togglePw');
-      this.authTitle   = document.getElementById('authTitle');
-      this.authDesc    = document.getElementById('authDesc');
-      this.userDisplay = document.getElementById('userDisplayName');
-      this.authBtnTop  = document.getElementById('authBtnTop');
-      this.modalClose  = document.getElementById('authModalClose');
+  let isRegister = false;
+  let isLoading  = false;
 
-      // 에러 메시지 요소
-      this.nameErr = document.getElementById('nameError');
-      this.pwErr   = document.getElementById('pwError');
+  /* ==========================================================================
+     토스트
+     ========================================================================== */
+  function showToast (msg, type = 'info', duration = 3500) {
+    if (!toastCont) return;
+    const icons = { error:'⚠️', success:'✅', warn:'💛', info:'☀️' };
+    const el = document.createElement('div');
+    el.className = `toast toast--${type}`;
+    el.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
+    toastCont.appendChild(el);
+    setTimeout(() => {
+      el.style.animation = 'toast-out 0.3s ease forwards';
+      setTimeout(() => el.remove(), 280);
+    }, duration);
+  }
 
-      this.isRegister = false;
-      this.isLoading  = false;
-    },
+  /* ==========================================================================
+     탭 전환
+     ========================================================================== */
+  function switchTab (toRegister) {
+    isRegister = toRegister;
+    authTabs?.classList.toggle('tab--register', toRegister);
+    tabLogin?.classList.toggle('is-active', !toRegister);
+    tabRegister?.classList.toggle('is-active', toRegister);
 
-    bindEvents() {
-      this.tabLogin?.addEventListener('click', () => this.switchTab(false));
-      this.tabRegister?.addEventListener('click', () => this.switchTab(true));
+    if (nameField) nameField.style.display = toRegister ? '' : 'none';
+    if (authTitle) authTitle.textContent = toRegister ? '해피와 함께 시작해요!' : '다시 만나서 반가워요!';
+    if (authDesc)  authDesc.textContent  = toRegister
+      ? '지금 가입하면 모든 대화 기록을 보관할 수 있어요.'
+      : '해피와 나눈 소중한 대화를 이어가 보세요.';
+    if (submitLabel) submitLabel.textContent = toRegister ? '회원가입하기' : '로그인하기';
 
-      this.togglePw?.addEventListener('click', () => {
-        if (!this.userPw) return;
-        const show = this.userPw.type === 'password';
-        this.userPw.type = show ? 'text' : 'password';
-        this.togglePw.style.color = show ? 'var(--gold, #F5A623)' : '';
-      });
+    clearAllErrors();
+  }
 
-      this.userName?.addEventListener('blur', () => this.validateUsername(true));
-      this.userName?.addEventListener('input', () => this.clearFieldError(this.userName, this.nameErr));
+  tabLogin?.addEventListener('click',    () => switchTab(false));
+  tabRegister?.addEventListener('click', () => switchTab(true));
 
-      this.userPw?.addEventListener('blur', () => this.validatePassword(true));
-      this.userPw?.addEventListener('input', () => this.clearFieldError(this.userPw, this.pwErr));
+  /* ==========================================================================
+     비밀번호 토글
+     ========================================================================== */
+  togglePw?.addEventListener('click', () => {
+    if (!userPw) return;
+    const show = userPw.type === 'password';
+    userPw.type = show ? 'text' : 'password';
+    togglePw.style.color = show ? 'var(--gold)' : '';
+  });
 
-      this.authForm?.addEventListener('submit', (e) => this.handleSubmit(e));
+  /* ==========================================================================
+     인라인 에러 표시 / 해제
+     ========================================================================== */
+  function showFieldError (input, spanEl, msg) {
+    if (input) {
+      input.classList.add('is-error');
+      input.setAttribute('aria-invalid', 'true');
+    }
+    if (spanEl) {
+      spanEl.textContent = msg;
+      spanEl.classList.add('is-visible');
+    }
+  }
 
-      this.authBtnTop?.addEventListener('click', () => {
-        if (this.currentUser) {
-          this.logout();
-        } else {
-          this.openModal();
-        }
-      });
+  function clearFieldError (input, spanEl) {
+    input?.classList.remove('is-error');
+    input?.removeAttribute('aria-invalid');
+    if (spanEl) {
+      spanEl.textContent = '';
+      spanEl.classList.remove('is-visible');
+    }
+  }
 
-      this.modalClose?.addEventListener('click', () => this.closeModal());
-    },
+  function clearAllErrors () {
+    clearFieldError(userEmail, emailErr);
+    clearFieldError(userPw, pwErr);
+    clearFieldError(userName, nameErr);
+  }
 
-    openModal(registerMode = false) {
-      if (!this.authModal) return;
-      this.switchTab(registerMode);
-      this.authModal.classList.add('is-open');
-      this.userName?.focus();
-    },
+  // 포커스 아웃 시 즉시 검증
+  userEmail?.addEventListener('blur', () => validateEmail(true));
+  userPw?.addEventListener('blur',    () => validatePw(true));
+  userName?.addEventListener('blur',  () => { if (isRegister) validateName(true); });
 
-    closeModal() {
-      if (!this.authModal) return;
-      this.authModal.classList.remove('is-open');
-      this.clearAllErrors();
-    },
+  // 타이핑 중 에러 즉시 해소
+  userEmail?.addEventListener('input', () => clearFieldError(userEmail, emailErr));
+  userPw?.addEventListener('input',    () => clearFieldError(userPw, pwErr));
+  userName?.addEventListener('input',  () => clearFieldError(userName, nameErr));
 
-    switchTab(toRegister) {
-      this.isRegister = toRegister;
-      this.authTabs?.classList.toggle('tab--register', toRegister);
-      this.tabLogin?.classList.toggle('is-active', !toRegister);
-      this.tabRegister?.classList.toggle('is-active', toRegister);
+  /* ==========================================================================
+     검증 함수
+     ========================================================================== */
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-      if (this.authTitle) {
-        this.authTitle.textContent = toRegister ? '해피와 함께 시작해요!' : '다시 만나서 반가워요!';
-      }
-      if (this.authDesc) {
-        this.authDesc.textContent = toRegister
-          ? '아이디와 비밀번호로 간편하게 가입하세요.'
-          : '해피와 나눈 소중한 대화를 이어가 보세요.';
-      }
-      if (this.submitLabel) {
-        this.submitLabel.textContent = toRegister ? '회원가입하기' : '로그인하기';
-      }
-      this.clearAllErrors();
-    },
+  function validateEmail (show = false) {
+    const val = userEmail?.value.trim() ?? '';
+    if (!val) {
+      if (show) showFieldError(userEmail, emailErr, '이메일 주소를 입력해 주세요.');
+      return false;
+    }
+    if (!EMAIL_RE.test(val)) {
+      if (show) showFieldError(userEmail, emailErr, '올바른 이메일 형식이 아닙니다.');
+      return false;
+    }
+    if (val.length > 100) {
+      if (show) showFieldError(userEmail, emailErr, '이메일은 100자 이내로 입력해 주세요.');
+      return false;
+    }
+    clearFieldError(userEmail, emailErr);
+    return true;
+  }
 
-    showFieldError(input, spanEl, msg) {
-      if (input) {
-        input.classList.add('is-error');
-        input.setAttribute('aria-invalid', 'true');
-      }
-      if (spanEl) {
-        spanEl.textContent = msg;
-        spanEl.classList.add('is-visible');
-      }
-    },
+  function validatePw (show = false) {
+    const val = userPw?.value ?? '';
+    if (!val) {
+      if (show) showFieldError(userPw, pwErr, '비밀번호를 입력해 주세요.');
+      return false;
+    }
+    if (val.length < 8) {
+      if (show) showFieldError(userPw, pwErr, '비밀번호는 8자 이상이어야 합니다.');
+      return false;
+    }
+    if (val.length > 72) {
+      if (show) showFieldError(userPw, pwErr, '비밀번호는 72자 이내로 입력해 주세요.');
+      return false;
+    }
+    clearFieldError(userPw, pwErr);
+    return true;
+  }
 
-    clearFieldError(input, spanEl) {
-      input?.classList.remove('is-error');
-      input?.removeAttribute('aria-invalid');
-      if (spanEl) {
-        spanEl.textContent = '';
-        spanEl.classList.remove('is-visible');
-      }
-    },
+  function validateName (show = false) {
+    if (!isRegister) return true;
+    const val = userName?.value.trim() ?? '';
+    if (!val) {
+      if (show) showFieldError(userName, nameErr, '닉네임을 입력해 주세요.');
+      return false;
+    }
+    if (val.length < 2) {
+      if (show) showFieldError(userName, nameErr, '닉네임은 2자 이상이어야 합니다.');
+      return false;
+    }
+    if (val.length > 20) {
+      if (show) showFieldError(userName, nameErr, '닉네임은 20자 이내로 입력해 주세요.');
+      return false;
+    }
+    clearFieldError(userName, nameErr);
+    return true;
+  }
 
-    clearAllErrors() {
-      this.clearFieldError(this.userName, this.nameErr);
-      this.clearFieldError(this.userPw, this.pwErr);
-    },
+  /* ==========================================================================
+     폼 제출
+     ========================================================================== */
+  function setSubmitLoading (on) {
+    isLoading = on;
+    if (!submitBtn) return;
+    submitBtn.disabled = on;
+    submitBtn.classList.toggle('is-loading', on);
+  }
 
-    validateUsername(show = false) {
-      const val = this.userName?.value.trim() ?? '';
-      if (!val) {
-        if (show) this.showFieldError(this.userName, this.nameErr, '아이디를 입력해 주세요.');
-        return false;
-      }
-      if (val.length < 3 || val.length > 30) {
-        if (show) this.showFieldError(this.userName, this.nameErr, '아이디는 3~30자여야 합니다.');
-        return false;
-      }
-      const regex = /^[a-zA-Z0-9_]+$/;
-      if (!regex.test(val)) {
-        if (show) this.showFieldError(this.userName, this.nameErr, '영문, 숫자, 언더스코어(_)만 사용할 수 있습니다.');
-        return false;
-      }
-      this.clearFieldError(this.userName, this.nameErr);
-      return true;
-    },
+  authForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (isLoading) return;
 
-    validatePassword(show = false) {
-      const val = this.userPw?.value ?? '';
-      if (!val) {
-        if (show) this.showFieldError(this.userPw, this.pwErr, '비밀번호를 입력해 주세요.');
-        return false;
-      }
-      if (val.length < 8) {
-        if (show) this.showFieldError(this.userPw, this.pwErr, '비밀번호는 최소 8자 이상이어야 합니다.');
-        return false;
-      }
-      if (val.length > 128) {
-        if (show) this.showFieldError(this.userPw, this.pwErr, '비밀번호는 128자 이내여야 합니다.');
-        return false;
-      }
-      this.clearFieldError(this.userPw, this.pwErr);
-      return true;
-    },
+    // 전체 검증 실행
+    const ok = [
+      validateEmail(true),
+      validatePw(true),
+      validateName(true),
+    ].every(Boolean);
 
-    setLoading(on) {
-      this.isLoading = on;
-      if (!this.submitBtn) return;
-      this.submitBtn.disabled = on;
-      this.submitBtn.classList.toggle('is-loading', on);
-    },
+    if (!ok) {
+      // 첫 번째 에러 필드에 포커스
+      const errField = [userName, userEmail, userPw]
+        .find(f => f?.classList.contains('is-error'));
+      errField?.focus();
+      return;
+    }
 
-    async checkSession() {
-      try {
-        const res = await fetch('/api/auth/me', {
-          headers: { 'Accept': 'application/json' },
-          credentials: 'same-origin'
-        });
-        if (res.ok) {
-          const user = await res.json();
-          this.onLoginSuccess(user);
-        } else {
-          this.onLogoutSuccess();
-        }
-      } catch (e) {
-        this.onLogoutSuccess();
-      }
-    },
+    setSubmitLoading(true);
 
-    async handleSubmit(e) {
-      e.preventDefault();
-      if (this.isLoading) return;
+    try {
+      const endpoint = isRegister ? '/api/auth/signup' : '/api/auth/login';
+      
+      // 팀 규격: username (3~30자, 영문/숫자/언더스코어), password (8자 이상)
+      // 이메일 입력값에서 유효한 username을 추출하거나 name/email을 매핑
+      const emailVal = userEmail?.value.trim() ?? '';
+      const rawUser = userName?.value.trim() || emailVal.split('@')[0] || 'user';
+      // 영문/숫자/언더스코어만 남기고 3자 이상 보장
+      const cleanUser = rawUser.replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 30);
+      const username = cleanUser.length >= 3 ? cleanUser : (cleanUser + '_01').slice(0, 30);
 
-      const validUser = this.validateUsername(true);
-      const validPw   = this.validatePassword(true);
-      if (!validUser || !validPw) {
-        (validUser ? this.userPw : this.userName)?.focus();
-        return;
-      }
-
-      this.setLoading(true);
-
-      const endpoint = this.isRegister ? '/api/auth/signup' : '/api/auth/login';
-      const payload  = {
-        username: this.userName.value.trim(),
-        password: this.userPw.value
+      const payload = {
+        username: username,
+        password: userPw?.value,
       };
 
-      try {
-        const res = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(payload),
-          credentials: 'same-origin'
-        });
+      const res = await fetch(endpoint, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body:    JSON.stringify(payload),
+        credentials: 'same-origin',
+        signal:  AbortSignal.timeout(15_000),
+      });
 
-        const data = await res.json().catch(() => ({}));
+      const data = await res.json().catch(() => ({}));
 
-        if (res.ok) {
-          if (this.isRegister) {
-            window.ChatApp?.showToast('회원가입이 완료되었습니다! 로그인해 주세요.', 'success');
-            this.switchTab(false);
-          } else {
-            window.ChatApp?.showToast(`${data.username}님, 반가워요! ☀️`, 'success');
-            this.onLoginSuccess(data);
-            this.closeModal();
-            window.ChatApp?.loadRooms();
-          }
-        } else if (res.status === 409) {
-          this.showFieldError(this.userName, this.nameErr, '이미 존재하는 아이디입니다.');
+      if (res.ok) {
+        showToast(isRegister ? '환영해요! 해피와 함께해요 🎉' : '돌아오셨군요! 반가워요 ☀️', 'success');
+        if (isRegister) {
+          // 가입 성공 시 로그인 탭으로 전환 또는 자동 로그인 안내
+          setTimeout(() => {
+            switchTab(false);
+            showToast('로그인을 진행해 주세요.', 'info');
+          }, 900);
+        } else {
+          setTimeout(() => { window.location.href = '/chat'; }, 900);
+        }
+      } else {
+        if (res.status === 409) {
+          showFieldError(userEmail, emailErr, data?.detail || '이미 사용 중인 아이디입니다.');
         } else if (res.status === 401) {
-          this.showFieldError(this.userPw, this.pwErr, '아이디 또는 비밀번호가 일치하지 않습니다.');
+          showFieldError(userPw, pwErr, data?.detail || '아이디 또는 비밀번호가 일치하지 않아요.');
         } else if (res.status === 422) {
-          window.ChatApp?.showToast('입력 형식이 올바르지 않습니다. (아이디 3~30자 영문/숫자, 비밀번호 8자 이상)', 'error');
-        } else if (res.status === 501) {
-          // 백엔드가 아직 501(미구현) 상태인 경우 친절한 안내
-          window.ChatApp?.showToast('백엔드 인증 API가 개발 중입니다. 로컬 세션으로 연결합니다.', 'info');
-          const mockUser = { id: 1, username: payload.username };
-          this.onLoginSuccess(mockUser);
-          this.closeModal();
+          showToast('입력 형식을 확인해 주세요. (아이디 3~30자, 비밀번호 8자 이상)', 'error');
         } else {
-          const detail = data?.detail || '오류가 발생했습니다. 다시 시도해 주세요.';
-          window.ChatApp?.showToast(detail, 'error');
+          showToast(data?.detail || data?.message || '오류가 발생했습니다. 다시 시도해 주세요.', 'error');
         }
-      } catch (err) {
-        if (!navigator.onLine) {
-          window.ChatApp?.showToast('인터넷 연결이 끊겼습니다.', 'error');
-        } else {
-          window.ChatApp?.showToast('네트워크 오류가 발생했습니다.', 'error');
-        }
-      } finally {
-        this.setLoading(false);
       }
-    },
-
-    async logout() {
-      try {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          credentials: 'same-origin'
-        });
-      } catch (e) {
-        // 무시
+    } catch (err) {
+      if (err.name === 'TimeoutError') {
+        showToast('요청 시간이 초과됐어요. 다시 시도해 주세요.', 'error');
+      } else if (!navigator.onLine) {
+        showToast('인터넷 연결이 끊겼습니다.', 'error');
+      } else {
+        showToast('일시적인 오류가 발생했어요.', 'error');
       }
-      this.onLogoutSuccess();
-      window.ChatApp?.showToast('로그아웃되었습니다.', 'info');
-    },
-
-    onLoginSuccess(user) {
-      this.currentUser = user;
-      if (this.userDisplay) {
-        this.userDisplay.textContent = user.username;
-        this.userDisplay.style.display = 'inline-block';
-      }
-      if (this.authBtnTop) {
-        this.authBtnTop.textContent = '로그아웃';
-        this.authBtnTop.classList.add('is-logged-in');
-      }
-      document.body.classList.add('is-authenticated');
-      document.body.classList.remove('is-guest');
-    },
-
-    onLogoutSuccess() {
-      this.currentUser = null;
-      if (this.userDisplay) {
-        this.userDisplay.textContent = '';
-        this.userDisplay.style.display = 'none';
-      }
-      if (this.authBtnTop) {
-        this.authBtnTop.textContent = '로그인';
-        this.authBtnTop.classList.remove('is-logged-in');
-      }
-      document.body.classList.remove('is-authenticated');
-      document.body.classList.add('is-guest');
+    } finally {
+      setSubmitLoading(false);
     }
-  };
+  });
 
-  window.AuthModule = Auth;
-})(window);
+})();
