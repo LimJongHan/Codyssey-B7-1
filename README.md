@@ -2,7 +2,7 @@
 
 일상의 고민을 이야기하고 공감과 격려를 받는 웹 AI 챗봇이다. 사용자는 로그인 후 채팅방을 만들고 대화를 이어가며 이전 대화를 다시 확인한다.
 
-현재는 **4인 개발용 초기 템플릿**이다. FastAPI 실행, 시작 화면, API 계약, 입력 검증, 로컬 SQLite 초기화가 준비되어 있다. OpenAI Responses API 호출은 구현되어 있으며, 회원가입·로그인·채팅 저장과 AI 함수 연결은 담당자가 구현해야 한다. 미구현 API는 `501`, 인증이 필요한 API는 `401`을 반환한다.
+현재는 **4인 개발용 초기 템플릿**이다. FastAPI 실행, 시작 화면, API 계약, 입력 검증, 로컬 SQLite 초기화가 준비되어 있다. Codyssey OpenAI 호환 Chat Completions API 호출은 구현되어 있으며, 회원가입·로그인·채팅 저장과 AI 함수 연결은 담당자가 구현해야 한다. 미구현 API는 `501`, 인증이 필요한 API는 `401`을 반환한다.
 
 ## 실행
 
@@ -25,10 +25,10 @@ uv run --env-file .env uvicorn app.main:app --reload
 | --- | --- | --- |
 | `DATABASE_PATH` | 로컬 SQLite 파일 경로 | 사용, 기본 `.data/positive-bot.db` |
 | `AI_API_KEY` | AI 제공자 비밀 키 | 사용 |
-| `AI_MODEL` | AI 모델 이름, 비어 있으면 `gpt-6-luna` | 사용 |
+| `AI_MODEL` | AI 모델 이름, 비어 있으면 `gpt-5-mini` | 사용 |
 | `AI_TIMEOUT_SECONDS` | AI 요청 제한 시간, 기본 30초 | 사용 |
 
-`AI_API_KEY`에 OpenAI API 키를 설정한다. AI 함수는 전달받은 대화를 순서대로 보내며, 공감 프롬프트·자동 재시도 없는 타임아웃·호출 성공/실패 로그를 적용한다. 자동 테스트는 외부 API를 대체하므로 비용이 발생하지 않는다.
+`AI_API_KEY`에 Codyssey 발급 API 키를 설정한다. 호출 주소는 `https://copa.codyssey.kr/v1/chat/completions`이며, `AI_MODEL=gpt-5-mini`를 사용한다. [Codyssey API 문서](https://usr.codyssey.kr/public-api-console)를 기준으로 연결한다. AI 함수는 전달받은 대화를 순서대로 보내며, 공감 프롬프트·자동 재시도 없는 타임아웃·호출 성공/실패 로그를 적용한다. 자동 테스트는 외부 API를 대체하므로 비용이 발생하지 않는다. 2026-10-08 기준 자동 테스트 11개 통과 및 `gpt-5-mini` 실제 응답 수신을 확인했다.
 
 `.env`와 DB 파일은 Git에서 제외한다. 인증 구현에 추가 설정이 필요하면 `.env.example`에 이름과 빈 값만 추가한다.
 
