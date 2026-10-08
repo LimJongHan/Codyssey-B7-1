@@ -170,22 +170,22 @@ class SendMessageTests(ChatTestCase):
         self.assertIn(f"request_received user_id={self.alice.id} room_id={self.room['id']}", output)
         self.assertIn(f"db_save_success user_id={self.alice.id} room_id={self.room['id']} exchange_id={exchange['id']}", output)
 
-    def test_sends_recent_five_exchanges_as_context(self):
-        for number in range(1, 7):
+    def test_sends_recent_ten_exchanges_as_context(self):
+        for number in range(1, 13):
             self.add_exchange(self.room["id"], f"질문{number}", f"답변{number}")
         self.add_exchange(self.create_room("다른 방")["id"], "다른 방 질문", "다른 방 답변")
 
-        with patch("app.chat.router.generate_reply", AsyncMock(return_value="답변7")) as reply:
-            self.assertEqual(self.send("질문7").status_code, 201)
+        with patch("app.chat.router.generate_reply", AsyncMock(return_value="답변13")) as reply:
+            self.assertEqual(self.send("질문13").status_code, 201)
 
         expected = []
-        for number in range(2, 7):
+        for number in range(3, 13):
             expected += [{"role": "user", "content": f"질문{number}"}, {"role": "assistant", "content": f"답변{number}"}]
-        expected.append({"role": "user", "content": "질문7"})
+        expected.append({"role": "user", "content": "질문13"})
         reply.assert_awaited_once_with(expected)
 
     def test_ai_failure_is_reported_and_not_saved(self):
-        for status, detail in ((502, "AI 응답을 받지 못했어요."), (504, "응답이 지연되고 있어요.")):
+        for status, detail in ((502, "AI 응답을 받지 못했어요."), (503, "AI 서비스 설정을 확인해 주세요."), (504, "응답이 지연되고 있어요.")):
             with self.subTest(status=status):
                 with patch("app.chat.router.generate_reply", AsyncMock(side_effect=AIError(detail, status))), \
                         self.assertLogs("app.chat.router", "WARNING") as logs:

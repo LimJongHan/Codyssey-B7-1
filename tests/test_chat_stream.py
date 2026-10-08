@@ -86,14 +86,14 @@ class ChatStreamTests(unittest.TestCase):
         async def stream(messages):
             self.assertEqual(messages[0], {"role": "user", "content": "q2"})
             self.assertEqual(messages[-2], {"role": "assistant", "content": "a11"})
-            self.assertEqual(len(messages), 21)  # AI 함수에서 새 질문 포함 최신 20개로 제한
+            self.assertEqual(len(messages), 21)  # AI 함수도 가장 오래된 질문을 자르지 않는다
             self.assertNotIn("private", str(messages))
             yield "답변"
         with patch("app.chat.router.stream_reply", stream):
             self.assertEqual(self.events(self.send())[-1][0], "done")
 
     def test_ai_failure_sends_error_without_saving(self):
-        for code in (502, 504):
+        for code in (502, 503, 504):
             async def stream(messages):
                 yield "부분 응답"
                 raise AIError("응답 실패", code)
@@ -118,6 +118,17 @@ class ChatStreamTests(unittest.TestCase):
         self.assertEqual(events[-1][1]["status_code"], 500)
         self.assertNotIn("private", response.text)
         self.assertEqual(self.count(), 0)
+
+    def test_db_read_failure_is_json_before_stream_starts(self):
+        with patch("app.chat.router.connect", side_effect=sqlite3.OperationalError("private")):
+            for path in ("/api/rooms", "/api/rooms/1/messages"):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 500)
+                self.assertEqual(response.json(), {"detail": "대화 내역을 불러오지 못했습니다."})
+            for path in ("/api/rooms/1/messages", "/api/rooms/1/messages/stream"):
+                response = self.client.post(path, json={"question": "안녕"})
+                self.assertEqual(response.status_code, 500)
+                self.assertEqual(response.json(), {"detail": "대화 내역을 불러오지 못했습니다."})
 
     def test_disconnection_closes_ai_without_saving(self):
         closed = []

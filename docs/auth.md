@@ -144,7 +144,7 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 ## 검증 결과
 
-2026-10-08, Python 3.12.13에서 전체 **52개 테스트**를 통과했다. 아래 인증 테스트 46개와 기존 기반 테스트 6개가 포함된다. 테스트는 임시 SQLite DB를 사용하며 실제 사용자 데이터를 수정하지 않는다.
+2026-10-08, Python 3.12에서 인증·채팅·AI·기반을 포함한 전체 **85개 테스트**를 통과했다. 테스트는 임시 SQLite DB를 사용하며 실제 사용자 데이터를 수정하지 않는다.
 
 | 파일 | 검증 내용 |
 | --- | --- |
@@ -159,7 +159,7 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 | `tests/test_auth_lifecycle.py` | HTTPS 쿠키, 고정 만료, 새 Python 프로세스에서 세션 유지 |
 | `tests/test_auth_access.py` | 실제 보호 API 인증 연결, 사용자 구분, 로그인 중 가입 |
 
-`TestClient`를 사용한 HTTP/HTTPS 쿠키 검증이며 실제 배포 브라우저 검증은 아니다. 채팅 미구현 상태에서 인증 통과 후 `501`에 도달하는 것을 검증했으며, 실제 방 생성·소유권·AI 호출 성공을 검증했다고 간주하지 않는다.
+`TestClient`로 HTTP/HTTPS 쿠키를 검증한다. 인증 연결 테스트는 실제 세션으로 방 생성(`user_id` 위조 무시), 내역 조회, JSON/SSE 전송·저장, 로그아웃 후 접근 차단을 확인한다. AI 응답은 테스트 안에서만 대체한다. 외부 제공자 성공이나 원격 배포 검증을 뜻하지 않는다.
 
 별도로 임시 SQLite DB와 실제 Uvicorn 서버를 실행해 로컬 HTTP에서 가입·중복 가입·로그인·현재 사용자 조회·입력 오류·로그아웃·로그아웃 후 접근 차단을 확인했다. 위 API 예시의 JSON 응답과 HttpOnly 쿠키 발급도 함께 확인했다.
 
@@ -169,5 +169,5 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 - 화면: 가입 → 별도 로그인 → `/me` 확인 → 로그아웃 및 `401` 안내.
 - 채팅: 인증된 `user.id`로 소유권 검사. 인증 통과만으로 타인 방 차단까지 완료된 것은 아니다.
-- 배포: 영구 DB는 아직 미정이다. 현재 Vercel DB 접근 차단을 유지하고 인증·채팅 담당이 저장소 변경을 함께 반영해야 한다.
+- 배포: 현재 AWS EC2 디스크의 SQLite를 사용한다. Vercel DB 접근 차단은 유지하며 배포 저장소를 바꾸면 인증·채팅 담당이 함께 반영한다.
 - 로그인 시도 제한과 외부 서비스의 전체 운영 검증은 현재 구현 완료 기준에 포함되어 있지 않다.

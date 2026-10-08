@@ -2,7 +2,7 @@
 
 일상의 고민을 이야기하고 공감과 격려를 받는 웹 AI 챗봇이다. 사용자는 로그인 후 채팅방을 만들고 대화를 이어가며 이전 대화를 다시 확인한다.
 
-현재는 **인증·채팅·AI가 구현된 4인 개발용 프로젝트**다. 회원가입·로그인·현재 사용자 조회·로그아웃과 보호 API 인증 검사가 동작한다. 채팅방 생성·목록·대화 내역 조회, JSON·SSE 질문 전송과 완료된 대화 저장, Codyssey API를 통한 AI 응답이 구현되어 있다. 화면 연결은 아직 미구현이다. 비로그인 요청은 `401`을 반환한다.
+현재는 **인증·채팅·AI와 화면이 연결된 4인 개발용 프로젝트**다. 화면에서 회원가입·로그인·로그아웃, 채팅방 생성·목록·이전 대화 조회가 동작한다. 질문을 보내면 SSE로 AI 답변을 순차 표시하고 완료된 대화를 저장한다. 비로그인 요청은 `401`을 반환한다.
 
 인증 내부의 비밀번호 해시·검증은 `argon2-cffi`의 Argon2id로 구현되어 있다. AI 호출에는 OpenAI SDK, SSE 응답에는 FastAPI 0.135 이상을 사용한다.
 
@@ -24,6 +24,7 @@ uv run --env-file .env uvicorn app.main:app --reload
 - API 명세 및 입력 테스트: http://127.0.0.1:8000/docs
 - 상태 확인: `GET /api/health` → `{"status":"ok"}` (서버 기동만 확인)
 - 검증: `uv run python -m unittest discover -s tests -v`
+- SSE 파서 검증(Node.js 22 이상): `node --test tests/test_web_stream.mjs`
 
 서버 시작 시 `.data/positive-bot.db`가 생성된다. 초기화를 별도로 실행하려면 `uv run --env-file .env python -m app.db`를 사용한다. 재실행은 기존 데이터를 지우지 않는다. 테이블 정의를 변경해도 기존 테이블이 자동 변경되지는 않는다.
 
@@ -34,7 +35,7 @@ uv run --env-file .env uvicorn app.main:app --reload
 | `AI_MODEL` | AI 모델 이름, 비어 있으면 `gpt-5-mini` | 사용 |
 | `AI_TIMEOUT_SECONDS` | AI 요청 제한 시간, 기본 30초 | 사용 |
 
-`AI_API_KEY`에 Codyssey 발급 API 키를 설정한다. 호출 주소는 `https://copa.codyssey.kr/v1/chat/completions`이며, `AI_MODEL=gpt-5-mini`를 사용한다. [Codyssey API 문서](https://usr.codyssey.kr/public-api-console)를 기준으로 연결한다. AI 함수는 새 질문을 포함한 최신 메시지 최대 20개를 순서대로 보내며(시스템 프롬프트 별도), 공감 프롬프트·자동 재시도 없는 타임아웃·호출 성공/실패 로그를 적용한다. 자동 테스트는 외부 API를 대체하므로 비용이 발생하지 않는다. 2026-10-08 기준 자동 테스트 68개 통과 및 `gpt-5-mini` 실제 응답 수신을 확인했다.
+`AI_API_KEY`에 Codyssey 발급 API 키를 설정한다. 호출 주소는 `https://copa.codyssey.kr/v1/chat/completions`이며, `AI_MODEL=gpt-5-mini`를 사용한다. [Codyssey API 문서](https://usr.codyssey.kr/public-api-console)를 기준으로 연결한다. AI 함수는 최근 완료 Q/A 10개와 새 질문, 최대 21개 메시지를 순서대로 보낸다(시스템 프롬프트 별도). 공감 프롬프트·자동 재시도 없는 타임아웃·호출 성공/실패 로그를 적용한다. 자동 테스트는 외부 API를 대체하므로 비용이 발생하지 않는다.
 
 `.env`와 DB 파일은 Git에서 제외한다. 인증은 기존 `DATABASE_PATH`를 사용하며 별도 비밀 키나 추가 환경 변수가 필요하지 않다. 세션 수명은 24시간이다. 이후 인증 설정을 추가한다면 통합 담당과 `.env.example`에 반영한다.
 
@@ -43,7 +44,7 @@ uv run --env-file .env uvicorn app.main:app --reload
 ```text
 브라우저(app/web) → FastAPI(app/main.py)
                      ├─ auth: 로그인 및 사용자 확인
-                     └─ chat: 방 소유권 확인 → ai.generate_reply → 대화 저장
+                     └─ chat: 방 소유권 확인 → ai.stream_reply / generate_reply → 대화 저장
                           └─ SQLite(app/db.py)
 ```
 
@@ -98,7 +99,11 @@ AI 스트림은 OpenAI SDK의 `chat.completions.stream()`과 `content.delta` 이
 
 스트림 시작 전 인증·입력·소유권 오류는 HTTP `401`·`422`·`404`다. 시작 후에는 HTTP 상태를 바꿀 수 없으므로 `200`이어도 반드시 마지막 `done` 또는 `error`를 확인한다. 종료 이벤트 없이 연결이 끊기면 완료로 표시하지 않는다. 답변 완료 전 연결 중단은 저장하지 않으며, DB 커밋 후 연결이 끊긴 경우에는 저장됐지만 `done`을 못 받을 수 있다. 자동 재전송은 하지 않는다.
 
-서버는 해당 방의 최근 10개 Q/A를 읽고 새 질문을 붙인다. AI 함수가 시스템 프롬프트를 제외한 최신 20개 메시지만 사용한다. 스트리밍 도중에는 DB 연결을 유지하지 않는다. 프론트는 POST를 지원하는 `fetch`로 SSE를 읽어야 하며, 기본 `EventSource`는 사용하지 않는다. 현재 화면에는 이 연결이 구현되지 않았다.
+JSON·SSE 전송은 같은 문맥 조회·저장 함수를 사용한다. 서버는 해당 방의 최근 완료 Q/A 10개와 새 질문, 총 21개 메시지를 AI에 전달하며 가장 오래된 질문도 유지한다. 기준은 `app/ai/service.py`의 `CONTEXT_EXCHANGES`와 여기서 계산한 `MAX_CONTEXT_MESSAGES`다. 스트리밍 도중에는 DB 연결을 유지하지 않는다.
+
+화면은 POST `fetch`로 SSE를 읽어 한 말풍선에 답변 조각을 이어 붙인다. UTF-8 문자와 이벤트가 네트워크 조각 사이에서 나뉘어도 처리한다. 응답 중에는 중복 전송·방 이동·로그아웃을 막고, 조각을 받을 때마다 40초 수신 대기 제한을 갱신한다. `done` 수신 시 완료로 표시하며, 오류나 연결 중단 시 부분 답변은 미완료로 남기고 안내를 표시한다. HTTP 및 SSE `500`·`503`을 포함한 오류의 `detail` 문자열을 그대로 표시하며 자동 재시도하지 않는다.
+
+`/`, `/chat`, `/guest`는 하나의 `app/web/chat.html`을 사용한다. 메시지 영역만 스크롤되고 입력창은 그 아래에 별도 배치되어 여러 줄 입력과 긴 답변이 겹치지 않는다. 로그인 사용자는 헤더에서 로그아웃할 수 있다. 서버가 로그아웃에 실패하면 안내를 표시하고 현재 화면을 유지한다.
 
 ## DB 구조와 확인
 
@@ -141,8 +146,8 @@ AWS EC2(Ubuntu, 서울 리전) 한 대에서 실행한다. nginx가 80번 포트
 서버에 최신 `main`을 반영하는 절차는 아래와 같다. `.env.example`에 새 키가 생기면 서버 `.env`에도 직접 추가한다. 서버 로그는 `journalctl -u positive-bot`으로 확인한다.
 
 ```sh
-cd ~/positive-bot
-git pull
+cd ~/Codyssey-B7-1
+git pull --ff-only origin main
 uv sync --locked --no-dev
 sudo systemctl restart positive-bot
 ```
@@ -151,12 +156,12 @@ sudo systemctl restart positive-bot
 
 ## 제출 전 확인
 
-인증 검증: Python 3.12에서 **전체 52개 테스트(인증 46개 + 기존 기반 6개)** 통과. HTTPS 쿠키, 만료 경계, 새로운 Python 프로세스에서의 세션 유지, 동시 중복 가입, DB 장애 롤백과 사용자별 인증 구분을 확인했다. 실행 명령은 `uv run python -m unittest discover -s tests -v`다. 이 결과는 화면·채팅 구현이나 실제 배포 검증까지 완료됐다는 뜻은 아니다.
+2026-10-08 기준 Python 3.12에서 **전체 85개 테스트 통과**. 인증·쿠키·세션 유지·사용자 구분, JSON/SSE 문맥 21개 전달, 완료 후 저장, AI·DB 오류와 중단 시 미저장을 확인했다. 인증 연결 테스트도 실제 방 생성과 JSON/SSE 전송·조회·로그아웃 이후 차단을 검증한다. SSE 파서의 문자/이벤트 분할, 오류, 종료 이벤트 누락 등 Node.js 테스트 **7개가 통과**했다.
 
-채팅 검증: Python 3.12에서 채팅 테스트 **22개(`test_chat.py` 15개 + `test_chat_stream.py` 7개)**를 포함해 전체 83개 중 82개 통과. 실패 1개는 `tests/test_auth_access.py`가 채팅 API의 미구현 응답 `501`을 기대하는 검증이다. 임시 SQLite와 실제 Uvicorn 서버, 실제 인증으로 방 생성·목록, 다른 사용자 방 차단(`404`), AI 실패 시 미저장을 확인했다. 실제 AI 응답 성공 후 저장은 AI 대체 테스트로만 확인했다.
+브라우저 회귀 검증은 Playwright가 설치된 환경에서 `node tests/test_web_browser.cjs`로 실행한다. 별도 설치된 Playwright를 사용하면 `NODE_PATH`에 해당 `node_modules`를 지정하고, 설치된 Chrome을 쓰려면 `BROWSER_CHANNEL=chrome`을 지정한다. 테스트가 임시 SQLite·Uvicorn·테스트용 AI를 실행해 실제 세션, 순차 표시·저장/재조회, 데스크톱/모바일 배치, 오류 안내·로그아웃을 확인한 후 정리한다. 실제 제공자의 SSE 응답과 원격 배포 반영은 별도로 확인해야 한다.
 
 - [ ] 로그인한 사용자만 질문 가능, 다른 사용자의 방·내역 접근 불가
-- [ ] 실제 AI API 호출과 최신 20개 메시지 문맥 유지
+- [ ] 실제 AI API 호출과 최근 Q/A 10개 + 새 질문(21개 메시지) 문맥 유지
 - [ ] 질문·응답·사용자·생성 시각 누적 저장 및 조회
 - [ ] 요청 수신 / AI 호출·성공·실패 / DB 저장 성공·실패 로그
 - [ ] 빈 입력·길이 초과, AI 실패·타임아웃, DB 실패 처리

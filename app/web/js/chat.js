@@ -1,3 +1,5 @@
+import { APIError, responseError, readChatStream } from './api.js';
+
 /* ==========================================================================
    채팅 페이지 — 상태 관리, 입력 검증, UX 인터랙션
    ========================================================================== */
@@ -11,16 +13,14 @@
   const MAX_CHARS      = 2000;
   const WARN_CHARS     = 1800; // 경고 시작
   const DANGER_CHARS   = 1950; // 위험 표시
-  const GUEST_LIMIT    = 5;    // 게스트 최대 대화 횟수
   const RETRY_DELAY    = 1200; // 재시도 최소 간격(ms)
-  const SEND_TIMEOUT   = 40_000; // 서버 AI 제한 시간(30초)보다 길게 두어 서버의 504 안내를 먼저 받는다
+  const SEND_TIMEOUT   = 40_000; // 마지막 수신 이후의 대기 시간. 조각 수신마다 갱신한다
   const ROOM_TITLE_LEN = 30;   // 새 대화의 첫 질문 앞부분을 방 제목으로 쓴다
 
   /* ==========================================================================
      DOM 참조
      ========================================================================== */
   const layout          = document.getElementById('chatLayout');
-  const sidebar         = document.getElementById('sidebar');
   const backdrop        = document.getElementById('sidebarBackdrop');
   const btnToggle       = document.getElementById('btnToggle');
   const sidebarClose    = document.getElementById('sidebarClose');
@@ -28,7 +28,6 @@
   const offlineBanner   = document.getElementById('offlineBanner');
   const guestLimitBanner= document.getElementById('guestLimitBanner');
   const chatFeed        = document.getElementById('chatFeed');
-  const feedInner       = document.getElementById('feedInner');
   const welcomeBanner   = document.getElementById('welcomeBanner');
   const msgList         = document.getElementById('msgList');
   const typingRow       = document.getElementById('typingRow');
@@ -41,13 +40,15 @@
   const liveStatus      = document.getElementById('liveStatus');
   const headerTitle     = document.getElementById('headerTitle');
   const toastContainer  = document.getElementById('toastContainer');
+  const btnLogout       = document.getElementById('btnLogout');
 
   /* ==========================================================================
      상태
      ========================================================================== */
   let isSending    = false;
+  let isLoggingOut = false;
+  let isLoadingRoom = false;
   let isCollapsed  = false;
-  let guestCount   = parseInt(sessionStorage.getItem('happi_guest_count') || '0', 10);
   let isLoggedIn   = false; // /api/auth/me 결과. 로그인 사용자에게는 게스트 안내를 보이지 않는다
   let lastRetryTime= 0;
 
@@ -91,6 +92,7 @@
     } else {
       setStatus('해피가 귀 기울여 듣고 있어요', '');
     }
+    syncSendButton();
   }
 
   window.addEventListener('online',  syncOnline);
@@ -169,13 +171,13 @@
     try {
       const res = await fetch('/api/rooms', { credentials: 'same-origin' });
       if (res.status === 401) return; // 비로그인: 목록 없이 게스트 안내만 보인다
-      if (!res.ok) throw new Error(`rooms ${res.status}`);
+      if (!res.ok) throw await responseError(res);
       const rooms = await res.json();
       roomList?.replaceChildren();
       rooms.forEach(room => renderRoom(room));
       markActiveRoom();
-    } catch {
-      showToast('대화 목록을 불러오지 못했어요.', 'error');
+    } catch (error) {
+      showToast(error instanceof APIError ? error.message : '대화 목록을 불러오지 못했어요.', 'error');
     }
   }
 
@@ -185,13 +187,15 @@
       return;
     }
     activeRoomId = room.id;
+    isLoadingRoom = true;
+    syncSendButton();
     markActiveRoom();
     if (headerTitle) headerTitle.textContent = room.title;
     if (msgList) msgList.replaceChildren();
     if (window.innerWidth <= 768) closeSidebar();
     try {
       const res = await fetch(`/api/rooms/${room.id}/messages`, { credentials: 'same-origin' });
-      if (!res.ok) throw new Error(`messages ${res.status}`);
+      if (!res.ok) throw await responseError(res);
       const exchanges = await res.json();
       if (activeRoomId !== room.id) return; // 그사이 다른 방을 열었으면 무시한다
       if (welcomeBanner) welcomeBanner.style.display = exchanges.length ? 'none' : '';
@@ -200,8 +204,13 @@
         appendMsg(exchange.question, 'user', { time });
         appendMsg(exchange.answer, 'bot', { time });
       });
-    } catch {
-      if (activeRoomId === room.id) showToast('이전 대화를 불러오지 못했어요.', 'error');
+    } catch (error) {
+      if (activeRoomId === room.id) showToast(error instanceof APIError ? error.message : '이전 대화를 불러오지 못했어요.', 'error');
+    } finally {
+      if (activeRoomId === room.id) {
+        isLoadingRoom = false;
+        syncSendButton();
+      }
     }
   }
 
@@ -212,6 +221,8 @@
       return;
     }
     activeRoomId = null;
+    isLoadingRoom = false;
+    syncSendButton();
     markActiveRoom();
     if (msgList) msgList.innerHTML = '';
     if (welcomeBanner) welcomeBanner.style.display = '';
@@ -264,7 +275,7 @@
     clearInputError();
 
     // 빈 입력 검사
-    btnSend.disabled = trimmed.length === 0 || isSending || !navigator.onLine;
+    btnSend.disabled = trimmed.length === 0 || isSending || isLoggingOut || isLoadingRoom || !navigator.onLine;
   }
 
   function showInputError (msg) {
@@ -286,7 +297,7 @@
 
   // Enter 전송 / Shift+Enter 줄바꿈
   msgInput?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
       e.preventDefault();
       if (!btnSend.disabled) chatForm.requestSubmit();
     }
@@ -386,6 +397,7 @@
         retryBtn.textContent = '다시 시도';
         row.querySelector('.msg-bubble').append(retryBtn);
         retryBtn.addEventListener('click', () => {
+          if (isSending || isLoggingOut || isLoadingRoom) return;
           const now = Date.now();
           if (now - lastRetryTime < RETRY_DELAY) {
             showToast('잠시 후 다시 시도해 주세요.', 'warn', 2000);
@@ -424,13 +436,14 @@
     if (btnSend)      btnSend.classList.toggle('is-loading', on);
     if (chatForm)     chatForm.classList.toggle('is-disabled', on);
     if (msgInput)     msgInput.disabled = on;
+    if (btnLogout)    btnLogout.disabled = on;
+    syncSendButton();
 
     if (on) {
       setStatus('해피가 생각하는 중이에요...', 'var(--gold)');
       scrollFeed();
     } else {
       setStatus('해피가 귀 기울여 듣고 있어요', '');
-      syncSendButton();
       msgInput?.focus();
     }
   }
@@ -439,88 +452,83 @@
      API 호출
      ========================================================================== */
   async function sendMessage (text) {
-    if (!text || isSending || !navigator.onLine) return;
+    if (!text || isSending || isLoggingOut || isLoadingRoom || !navigator.onLine) return;
 
     appendMsg(text, 'user');
     setLoading(true);
-
-    // 게스트 카운터 증가와 제한 배너 표시 (비로그인일 때만)
-    if (!isLoggedIn) {
-      guestCount++;
-      sessionStorage.setItem('happi_guest_count', String(guestCount));
-      if (guestLimitBanner && guestCount >= GUEST_LIMIT) {
-        guestLimitBanner.classList.add('is-visible');
-      }
-    }
+    const controller = new AbortController();
+    let timeout;
+    const resetTimeout = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => controller.abort(new DOMException('응답 대기 시간 초과', 'TimeoutError')), SEND_TIMEOUT);
+    };
+    resetTimeout();
+    let botRow = null;
+    let streamStatus = null;
 
     try {
-      // 1. 새 대화면 첫 질문 앞부분을 제목으로 방을 만든다 (POST /api/rooms).
-      //    만들기에 실패하면 그 응답을 아래 오류 처리로 넘긴다.
-      let res;
       if (activeRoomId === null) {
         const title = Array.from(text.replace(/\s+/g, ' ')).slice(0, ROOM_TITLE_LEN).join('');
-        res = await fetch('/api/rooms', {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body:    JSON.stringify({ title }),
-          credentials: 'same-origin',
+        const res = await fetch('/api/rooms', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title }), credentials: 'same-origin', signal: controller.signal,
         });
-        if (res.ok) {
-          const room = await res.json();
-          activeRoomId = room.id;
-          renderRoom(room, { prepend: true });
-          markActiveRoom();
-          if (headerTitle) headerTitle.textContent = room.title;
+        if (!res.ok) throw await responseError(res);
+        const room = await res.json();
+        activeRoomId = room.id;
+        renderRoom(room, { prepend: true });
+        markActiveRoom();
+        if (headerTitle) headerTitle.textContent = room.title;
+      }
+
+      resetTimeout();
+      const response = await fetch(`/api/rooms/${activeRoomId}/messages/stream`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+        body: JSON.stringify({ question: text }), credentials: 'same-origin', signal: controller.signal,
+      });
+      resetTimeout();
+      let answer = '';
+      const exchange = await readChatStream(response, text => {
+        if (!botRow) {
+          botRow = appendMsg('', 'bot');
+          botRow.classList.add('is-streaming');
+          streamStatus = document.createElement('span');
+          streamStatus.className = 'msg-stream-status';
+          streamStatus.textContent = '답변을 받는 중…';
+          botRow.querySelector('.msg-col').append(streamStatus);
+          if (typingRow) typingRow.style.display = 'none';
+          setStatus('해피가 답변하는 중이에요...', 'var(--gold)');
         }
+        answer += text;
+        botRow.querySelector('.msg-bubble').textContent = answer;
+        scrollFeed();
+      }, resetTimeout);
+      if (!botRow) botRow = appendMsg(exchange.answer, 'bot');
+      botRow.querySelector('.msg-bubble').textContent = exchange.answer;
+      botRow.querySelector('.msg-time').textContent = formatTime(new Date(exchange.created_at));
+      botRow.dataset.exchangeId = String(exchange.id);
+      botRow.classList.remove('is-streaming');
+      streamStatus?.remove();
+      scrollFeed();
+    } catch (error) {
+      if (botRow) {
+        botRow.classList.remove('is-streaming');
+        botRow.classList.add('msg-row--incomplete');
+        streamStatus.textContent = '완료되지 않은 응답';
       }
-
-      // 2. 팀 백엔드 규격: POST /api/rooms/{room_id}/messages with {"question": text}
-      // 네트워크 오류·시간 초과는 아래 catch에서 오류로 안내한다. 대체 답변을 만들지 않는다.
-      if (activeRoomId !== null) {
-        res = await fetch(`/api/rooms/${activeRoomId}/messages`, {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body:    JSON.stringify({ question: text }),
-          credentials: 'same-origin',
-          signal:  AbortSignal.timeout(SEND_TIMEOUT),
-        });
-      }
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          appendMsg(
-            '로그인이 필요한 기능이에요. 로그인 후 이용해 주세요.',
-            'error',
-            {}
-          );
-          showToast('로그인이 필요합니다.', 'warn');
-        } else if (res.status === 422) {
-          appendMsg('질문 형식이 올바르지 않습니다. (1~2,000자 이내)', 'error', { retryText: text });
-          showToast('입력 형식을 확인해 주세요.', 'warn');
-        } else if (res.status === 502 || res.status === 504) {
-          appendMsg('AI 서비스 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.', 'error', { retryText: text });
-          showToast('AI 응답 지연', 'warn');
-        } else {
-          appendMsg('일시적인 오류가 발생했습니다. 다시 시도해 주세요.', 'error', { retryText: text });
-        }
-        return;
-      }
-
-      // 팀 규격 Exchange의 answer만 표시한다. 고정 문구로 AI 답변을 대신하지 않는다.
-      const exchange = await res.json();
-      appendMsg(exchange.answer, 'bot');
-
-    } catch (err) {
-      if (err.name === 'TimeoutError' || err.name === 'AbortError') {
-        appendMsg('응답 시간이 너무 걸렸어요. 다시 시도해 주세요.', 'error', { retryText: text });
-        showToast('응답 시간 초과. 재시도를 눌러주세요.', 'error');
-      } else if (!navigator.onLine) {
-        appendMsg('인터넷 연결이 끊겼어요. 연결 확인 후 재시도해 주세요.', 'error', { retryText: text });
-      } else {
-        appendMsg('일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.', 'error', { retryText: text });
-        showToast('오류가 발생했습니다.', 'error');
+      let message;
+      if (error instanceof APIError) message = error.message;
+      else if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+        message = '답변 수신이 지연되고 있습니다. 대화 내역을 확인한 뒤 다시 시도해 주세요.';
+      } else if (!navigator.onLine) message = '인터넷 연결이 끊겼어요. 연결 확인 후 재시도해 주세요.';
+      else message = '일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.';
+      appendMsg(message, 'error', error.status === 401 ? {} : { retryText: text });
+      if (error.status === 401) {
+        renderAuthState(null);
+        showToast(message, 'warn');
       }
     } finally {
+      clearTimeout(timeout);
       setLoading(false);
     }
   }
@@ -555,7 +563,7 @@
     }
 
     // 4) 중복 전송 방지
-    if (isSending) return;
+    if (isSending || isLoggingOut || isLoadingRoom) return;
 
     clearInputError();
     msgInput.value = '';
@@ -565,37 +573,53 @@
     sendMessage(text);
   });
 
-  /* ==========================================================================
-     auth.js 입력 검증
-     ========================================================================== */
-  const togglePw = document.getElementById('togglePw');
-  const pwInput  = document.getElementById('userPw');
-
-  if (togglePw && pwInput) {
-    togglePw.addEventListener('click', () => {
-      const show = pwInput.type === 'password';
-      pwInput.type = show ? 'text' : 'password';
-      togglePw.style.color = show ? 'var(--gold)' : '';
-    });
-  }
-
-  /* 로그인 상태 확인: 로그인했으면 게스트 카드·로그인 버튼·게스트 배너를 숨긴다 */
-  async function syncAuthState () {
-    try {
-      const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
-      isLoggedIn = res.ok;
-    } catch {
-      isLoggedIn = false;
-    }
-    if (!isLoggedIn) return;
+  function renderAuthState (user) {
+    isLoggedIn = Boolean(user);
     const guestCard = document.getElementById('guestCard');
     const headerAuthArea = document.getElementById('headerAuthArea');
-    if (guestCard) guestCard.style.display = 'none';
-    if (headerAuthArea) headerAuthArea.style.display = 'none';
+    if (guestCard) guestCard.hidden = isLoggedIn;
+    if (headerAuthArea) headerAuthArea.hidden = isLoggedIn;
+    if (btnLogout) btnLogout.hidden = !isLoggedIn;
     guestLimitBanner?.classList.remove('is-visible');
   }
 
-  /* 초기 상태 동기화 */
+  async function syncAuthState () {
+    try {
+      const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+      if (res.status === 401) renderAuthState(null);
+      else {
+        if (!res.ok) throw await responseError(res);
+        renderAuthState(await res.json());
+      }
+    } catch (error) {
+      showToast(error instanceof APIError ? error.message : '로그인 상태를 확인하지 못했어요.', 'error');
+    }
+  }
+
+  btnLogout?.addEventListener('click', async () => {
+    if (isSending || isLoggingOut) return;
+    isLoggingOut = true;
+    btnLogout.disabled = true;
+    syncSendButton();
+    try {
+      const res = await fetch('/api/auth/logout', {
+        method: 'POST', credentials: 'same-origin', signal: AbortSignal.timeout(10_000),
+      });
+      if (!res.ok) throw await responseError(res);
+      renderAuthState(null);
+      activeRoomId = null;
+      roomList?.replaceChildren();
+      msgList?.replaceChildren();
+      window.location.assign('/auth');
+    } catch (error) {
+      showToast(error instanceof APIError ? error.message : '로그아웃하지 못했습니다. 다시 시도해 주세요.', 'error');
+    } finally {
+      isLoggingOut = false;
+      btnLogout.disabled = false;
+      syncSendButton();
+    }
+  });
+
   syncSendButton();
   syncAuthState();
   loadRooms();

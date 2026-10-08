@@ -58,8 +58,8 @@ class AITests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("ai_call_success", str(logs.output))
         self.assertNotIn("test-secret", str(logs.output))
 
-    async def test_context_keeps_latest_twenty_messages(self):
-        for count in (19, 20, 21, 41):
+    async def test_context_preserves_ten_pairs_and_new_question(self):
+        for count in (1, 19, 21, 41):
             with self.subTest(count=count):
                 messages = [
                     {"role": "user" if i % 2 == 0 else "assistant", "content": str(i)}
@@ -70,7 +70,7 @@ class AITests(unittest.IsolatedAsyncioTestCase):
                 def handler(request):
                     sent = json.loads(request.content)["messages"]
                     self.assertEqual(sent[0], {"role": "system", "content": SYSTEM_PROMPT})
-                    self.assertEqual(sent[1:], original[-20:])
+                    self.assertEqual(sent[1:], original[-21:])
                     self.assertEqual(sent[-1], original[-1])
                     return self.response()
 
@@ -136,11 +136,11 @@ class AITests(unittest.IsolatedAsyncioTestCase):
                     client.assert_not_called()
 
     async def test_stream_delivers_chunks_and_preserves_context(self):
-        messages = [{"role": "user", "content": str(i)} for i in range(25)]
+        messages = [{"role": "user" if i % 2 == 0 else "assistant", "content": str(i)} for i in range(25)]
         def handler(request):
             body = json.loads(request.content)
             self.assertTrue(body["stream"])
-            self.assertEqual(body["messages"][1:], messages[-20:])
+            self.assertEqual(body["messages"][1:], messages[-21:])
             events = [
                 {"choices": [{"index": 0, "delta": {"role": "assistant", "content": "힘내"}, "finish_reason": None}]},
                 {"choices": [{"index": 0, "delta": {"role": "assistant", "content": "세요!"}, "finish_reason": None}]},

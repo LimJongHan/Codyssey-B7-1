@@ -158,6 +158,7 @@
           </svg>
         </a>
       </div>
+      <button type="button" class="btn-header-login" id="btnLogout" hidden>로그아웃</button>
     </header>
 
     <!-- 오프라인 배너 -->
@@ -266,36 +267,7 @@
           </div>
         </div>
 
-        <div class="msg-list" id="msgList">
-          <div class="msg-row msg-row--bot">
-            <div class="msg-av">
-              <div class="happi happi--sm happi--cheerful" data-happi role="img" aria-label="해피">
-                <svg class="happi__svg" viewBox="0 0 100 100" fill="none" overflow="visible">
-                  <defs>
-                    <radialGradient id="hFace_msg_chat" cx="40%" cy="32%" r="70%">
-                      <stop offset="0%" stop-color="#FFE566"/>
-                      <stop offset="50%" stop-color="#FFB830"/>
-                      <stop offset="100%" stop-color="#CC6600"/>
-                    </radialGradient>
-                  </defs>
-                  <circle cx="50" cy="50" r="36" fill="url(#hFace_msg_chat)"/>
-                  <circle cx="38" cy="48" r="6" fill="#1A1040"/>
-                  <circle cx="62" cy="48" r="6" fill="#1A1040"/>
-                  <path d="M 37 62 Q 50 76 63 62" stroke="#1A1040" stroke-width="2.8" stroke-linecap="round" fill="none"/>
-                </svg>
-              </div>
-            </div>
-            <div class="msg-col">
-              <span class="msg-sender">해피</span>
-              <div class="msg-bubble">
-                오늘 하루도 정말 고생 많으셨어요 🌿<br>
-                지금 이 순간, 당신이 있는 그대로 소중하다는 걸 잊지 마세요.<br>
-                기분이나 마음 상태는 어떤가요? 편하게 이야기해 줘요!
-              </div>
-              <span class="msg-time">오후 3:45</span>
-            </div>
-          </div>
-        </div>
+        <div class="msg-list" id="msgList" aria-live="polite" aria-relevant="additions text"></div>
 
         <div class="typing-row" id="typingRow" style="display:none;">
           <div class="msg-av">
@@ -360,6 +332,6 @@
 <!-- 토스트 컨테이너 -->
 <div id="toastContainer"></div>
 
-<script src="/static/js/chat.js"></script>
+<script type="module" src="/static/js/chat.js"></script>
 </body>
 </html>

@@ -12,6 +12,8 @@ from openai import (
 from openai.types.chat import ChatCompletion
 
 logger = logging.getLogger(__name__)
+CONTEXT_EXCHANGES = 10
+MAX_CONTEXT_MESSAGES = CONTEXT_EXCHANGES * 2 + 1  # 완료 Q/A 10개와 새 질문, 시스템 프롬프트 별도
 SYSTEM_PROMPT = (
     "너는 사용자의 이야기에 공감하고 격려하는 긍정봇이다. "
     "한국어 존댓말로 사용자가 말한 상황과 감정을 구체적으로 짚고 짧게 답한다. "
@@ -76,11 +78,11 @@ def _answer(response: ChatCompletion) -> str:
 
 
 async def generate_reply(messages: list[Message]) -> str:
-    """새 질문을 포함한 최신 메시지 20개를 사용하고 응답 텍스트만 반환한다."""
+    """최근 Q/A 10개와 새 질문을 포함한 최대 21개 메시지를 사용하고 응답 텍스트만 반환한다."""
     async with _ai_client() as client:
         response = await client.chat.completions.create(
             model=os.getenv("AI_MODEL", "").strip() or "gpt-5-mini",
-            messages=[{"role": "system", "content": SYSTEM_PROMPT}, *messages[-20:]],
+            messages=[{"role": "system", "content": SYSTEM_PROMPT}, *messages[-MAX_CONTEXT_MESSAGES:]],
         )
         return _answer(response)
 
@@ -90,7 +92,7 @@ async def stream_reply(messages: list[Message]) -> AsyncIterator[str]:
     async with _ai_client() as client:
         async with client.chat.completions.stream(
             model=os.getenv("AI_MODEL", "").strip() or "gpt-5-mini",
-            messages=[{"role": "system", "content": SYSTEM_PROMPT}, *messages[-20:]],
+            messages=[{"role": "system", "content": SYSTEM_PROMPT}, *messages[-MAX_CONTEXT_MESSAGES:]],
         ) as stream:
             async for event in stream:
                 if event.type == "content.delta":

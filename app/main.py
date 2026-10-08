@@ -36,17 +36,9 @@ async def ai_error_handler(request, error: AIError):
 
 # ── 웹 프론트엔드 페이지 서빙 (원본 디자인 100% 매핑) ──
 @app.get("/", include_in_schema=False)
-def index():
-    return FileResponse(WEB_DIR / "index.html")
-
-
 @app.get("/chat", include_in_schema=False)
-def chat_page():
-    return FileResponse(WEB_DIR / "chat.html")
-
-
 @app.get("/guest", include_in_schema=False)
-def guest_page():
+def chat_page():
     return FileResponse(WEB_DIR / "chat.html")
 
 

@@ -6,7 +6,7 @@
 /* ── 앱 루트 ── */
 .chat-layout {
   display: flex;
-  width: 100vw; height: 100vh;
+  width: 100%; height: 100vh; height: 100dvh;
   overflow: hidden;
   position: relative;
   z-index: 1;
@@ -338,21 +338,27 @@
 
 .header-left {
   display: flex;
+  flex: 1;
+  min-width: 0;
   align-items: center;
   gap: 14px;
 }
 
 .btn-toggle {
   width: 36px; height: 36px;
+  flex-shrink: 0;
   border-radius: var(--r-sm);
   display: flex; align-items: center; justify-content: center;
   color: var(--text-sec);
 }
 .btn-toggle:hover { background: var(--bg-card); color: var(--text-pri); }
 
-.header-info { display: flex; flex-direction: column; gap: 2px; }
+.header-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 
 .header-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 14.5px;
   font-weight: 800;
   color: var(--text-hi);
@@ -367,6 +373,8 @@
 .status-txt { font-size: 11.5px; color: var(--text-dim); font-weight: 500; }
 
 .btn-header-login {
+  flex-shrink: 0;
+  white-space: nowrap;
   display: flex; align-items: center; gap: 6px;
   padding: 6px 14px;
   border-radius: var(--r-full);
@@ -450,7 +458,9 @@
 .chat-feed {
   flex: 1;
   overflow-y: auto;
-  padding: 24px 22px 200px;
+  min-height: 0;
+  padding: 24px 22px;
+  overscroll-behavior: contain;
   display: flex;
   justify-content: center;
 }
@@ -562,7 +572,7 @@
 
 .msg-av { flex-shrink: 0; margin-top: 2px; }
 
-.msg-col { display: flex; flex-direction: column; gap: 4px; }
+.msg-col { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 
 .msg-sender {
   font-size: 11.5px; font-weight: 700;
@@ -576,6 +586,7 @@
   line-height: 1.65;
   border-radius: var(--r-lg);
   word-break: break-word;
+  white-space: pre-wrap;
   position: relative;
 }
 
@@ -666,8 +677,8 @@
    인풋 도크
    ========================================================================== */
 .input-dock {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
+  position: relative;
+  flex-shrink: 0;
   padding: 16px 22px 24px;
   background: linear-gradient(
     180deg,
@@ -715,6 +726,7 @@
 .dock-textarea {
   width: 100%;
   max-height: 140px;
+  max-height: min(140px, 25dvh);
   resize: none;
   border: none;
   background: transparent;
@@ -834,8 +846,13 @@
   }
   .btn-sidebar-close { display: flex; }
   .quick-grid { grid-template-columns: 1fr; }
-  .chat-feed { padding: 18px 14px 190px; }
+  .chat-feed { padding: 18px 14px; }
   .msg-row { max-width: 92%; }
   .input-dock { padding: 12px 14px 18px; }
   .emotion-tags { display: none; }
 }
+
+[hidden] { display: none !important; }
+.msg-row--incomplete .msg-bubble { opacity: 0.7; border-style: dashed; }
+.msg-stream-status { font-size: 11px; color: var(--text-dim); }
+.msg-row--error .msg-bubble { flex-wrap: wrap; }
