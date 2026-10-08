@@ -1,0 +1,361 @@
+{% extends 'base.html' %}
+{% block title %}해피 — 긍정 대화방{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+{% endblock %}
+
+{% block body_class %}{% endblock %}
+
+{% block content %}
+<div class="chat-layout" id="chatLayout">
+
+  {# ── 사이드바 ── #}
+  <aside class="sidebar" id="sidebar">
+
+    <div class="sidebar-head">
+      <a href="/" class="sidebar-logo-link" aria-label="해피 홈으로">
+        <div class="sidebar-logo-icon">
+          {% with size='icon', mood='cheerful' %}{% include 'components/character.html' %}{% endwith %}
+        </div>
+        <span class="sidebar-logo-name">해피</span>
+        <span class="sidebar-logo-tag">AI</span>
+      </a>
+      <button class="btn-sidebar-close" id="sidebarClose" aria-label="사이드바 닫기">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <path d="M18 6 6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="sidebar-new">
+      <button class="btn-new-chat" id="btnNewChat">
+        <svg class="ico-plus" width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        <span>새로운 대화</span>
+      </button>
+    </div>
+
+    <div class="sidebar-scroll">
+
+      {# 즐겨찾기 #}
+      <div>
+        <div class="sec-header">
+          <span class="sec-label">
+            <svg width="10" height="10" viewBox="0 0 24 24"
+                 fill="#FFB830" stroke="#FFB830" stroke-width="1.5">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02
+                               12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+            즐겨찾기
+          </span>
+          <span class="sec-count" id="favCount">2</span>
+        </div>
+        <ul class="chat-list" id="favList">
+          <li class="chat-item is-active" data-id="fav-1">
+            <span class="chat-emoji">☀️</span>
+            <span class="chat-title">힘든 날 읽는 긍정 확언 5가지</span>
+            <div class="item-actions">
+              <button class="btn-item-act fav-on" data-action="fav" title="즐겨찾기 해제">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#FFD060" stroke="#FFB830" stroke-width="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02
+                                   12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+              </button>
+            </div>
+          </li>
+          <li class="chat-item" data-id="fav-2">
+            <span class="chat-emoji">🌱</span>
+            <span class="chat-title">자존감 회복을 위한 대화</span>
+            <div class="item-actions">
+              <button class="btn-item-act fav-on" data-action="fav" title="즐겨찾기 해제">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#FFD060" stroke="#FFB830" stroke-width="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02
+                                   12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+              </button>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      {# 최근 대화 #}
+      <div>
+        <div class="sec-header">
+          <span class="sec-label">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            최근 대화
+          </span>
+        </div>
+        <div class="time-group">
+          <span class="time-label">오늘</span>
+          <ul class="chat-list">
+            <li class="chat-item" data-id="c-101">
+              <span class="chat-emoji">💬</span>
+              <span class="chat-title">오늘 하루의 긍정 에너지 충전 ✨</span>
+              <div class="item-actions">
+                <button class="btn-item-act" data-action="fav" title="즐겨찾기">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02
+                                     12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                  </svg>
+                </button>
+                <button class="btn-item-act" data-action="delete" title="삭제">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                  </svg>
+                </button>
+              </div>
+            </li>
+            <li class="chat-item" data-id="c-102">
+              <span class="chat-emoji">🌿</span>
+              <span class="chat-title">작은 성취를 축하하는 시간</span>
+              <div class="item-actions">
+                <button class="btn-item-act" data-action="fav" title="즐겨찾기">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02
+                                     12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                  </svg>
+                </button>
+                <button class="btn-item-act" data-action="delete" title="삭제">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                  </svg>
+                </button>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="time-group">
+          <span class="time-label">지난 7일</span>
+          <ul class="chat-list">
+            <li class="chat-item" data-id="c-103">
+              <span class="chat-emoji">☕</span>
+              <span class="chat-title">퇴근길 마음 편안해지는 대화</span>
+              <div class="item-actions">
+                <button class="btn-item-act" data-action="delete" title="삭제">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                  </svg>
+                </button>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-foot">
+      {% if is_logged_in %}
+        <div class="user-card">
+          <div class="user-avatar">{{ user_name[0]|default('나') }}</div>
+          <div class="user-info">
+            <div class="user-name-txt">{{ user_name }}</div>
+            <div class="user-email-txt">{{ user_email }}</div>
+          </div>
+          <a href="/logout" class="btn-logout" title="로그아웃">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </a>
+        </div>
+      {% else %}
+        <div class="guest-card">
+          <div class="guest-badge">게스트 모드</div>
+          <p class="guest-desc">로그인하면 대화 기록을 영구 보관할 수 있어요.</p>
+          <a href="/auth" class="btn-guest-login">
+            <span>로그인 / 회원가입</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.2">
+              <path d="M5 12h14m-7-7 7 7-7 7"/>
+            </svg>
+          </a>
+        </div>
+      {% endif %}
+    </div>
+
+  </aside>
+
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+  {# ── 메인 채팅 뷰포트 ── #}
+  <main class="chat-viewport">
+
+    {# 헤더 #}
+    <header class="chat-header">
+      <div class="header-left">
+        <button class="btn-toggle" id="btnToggle" aria-label="사이드바 토글">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <rect x="3" y="3" width="18" height="18" rx="4"/>
+            <path d="M9 3v18"/>
+          </svg>
+        </button>
+        <div class="header-info">
+          <h1 class="header-title" id="headerTitle">오늘의 긍정 에너지 ✨</h1>
+          <div class="header-status">
+            <div class="live-dot" id="liveStatus"></div>
+            <span class="status-txt" id="statusTxt">해피가 귀 기울여 듣고 있어요</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        {% if is_logged_in %}
+          <div class="header-user">
+            <div class="header-avatar">{{ user_name[0]|default('나') }}</div>
+            <span class="header-uname">{{ user_name }}</span>
+          </div>
+        {% else %}
+          <a href="/auth" class="btn-header-login">
+            <span>로그인</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.2">
+              <path d="M5 12h14m-7-7 7 7-7 7"/>
+            </svg>
+          </a>
+        {% endif %}
+      </div>
+    </header>
+
+    {# 오프라인 배너 #}
+    <div class="offline-banner" id="offlineBanner" role="alert">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.2">
+        <line x1="1" y1="1" x2="23" y2="23"/>
+        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1
+                 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0
+                 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/>
+      </svg>
+      <span>인터넷 연결이 끊겼습니다. 연결을 확인해 주세요.</span>
+    </div>
+
+    {# 게스트 제한 배너 #}
+    {% if not is_logged_in %}
+    <div class="guest-limit-banner" id="guestLimitBanner">
+      <span class="glb-txt">💛 로그인하면 대화 기록이 저장되고 더 많이 이야기 나눌 수 있어요!</span>
+      <a href="/auth" class="btn-glb-login">지금 시작하기</a>
+    </div>
+    {% endif %}
+
+    {# 메시지 피드 #}
+    <div class="chat-feed" id="chatFeed">
+      <div class="feed-inner" id="feedInner">
+
+        <div class="welcome-banner" id="welcomeBanner">
+          <div class="wb-mascot">
+            {% with size='md', mood='cheerful' %}{% include 'components/character.html' %}{% endwith %}
+          </div>
+          <h2 class="wb-title">
+            안녕하세요! 저는 <span class="name-hi">해피</span>예요 ☀️
+          </h2>
+          <p class="wb-desc">
+            오늘 있었던 일, 마음속 고민, 그 어떤 이야기도 편하게 털어놓아 보세요.<br>
+            온 마음을 다해 당신 편에서 들을게요.
+          </p>
+          <div class="quick-grid">
+            <button class="q-chip" data-prompt="오늘 하루 정말 열심히 살았는데 스스로 칭찬하고 싶어. 같이 칭찬해줄래?">
+              <span class="q-chip-em">👏</span>
+              <span class="q-chip-txt">오늘 수고한 나에게<br>칭찬 한마디</span>
+            </button>
+            <button class="q-chip" data-prompt="요즘 사소한 일에도 불안하고 지치는데, 따뜻한 위로의 말 한마디 들려줘.">
+              <span class="q-chip-em">🌿</span>
+              <span class="q-chip-txt">지친 마음에<br>따뜻한 위로 받기</span>
+            </button>
+            <button class="q-chip" data-prompt="내일 더 씩씩하게 일어날 수 있는 힘이 나는 긍정 확언 3가지 알려줘!">
+              <span class="q-chip-em">✨</span>
+              <span class="q-chip-txt">내일을 위한<br>긍정 확언 3가지</span>
+            </button>
+            <button class="q-chip" data-prompt="실수를 해서 자책하고 있어. 어떻게 마음을 다잡아야 할까?">
+              <span class="q-chip-em">☀️</span>
+              <span class="q-chip-txt">실수 후 자책감<br>훌훌 털어내기</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="msg-list" id="msgList">
+          <div class="msg-row msg-row--bot">
+            <div class="msg-av">
+              {% with size='sm', mood='cheerful' %}{% include 'components/character.html' %}{% endwith %}
+            </div>
+            <div class="msg-col">
+              <span class="msg-sender">해피</span>
+              <div class="msg-bubble">
+                오늘 하루도 정말 고생 많으셨어요 🌿<br>
+                지금 이 순간, 당신이 있는 그대로 소중하다는 걸 잊지 마세요.<br>
+                기분이나 마음 상태는 어떤가요? 편하게 이야기해 줘요!
+              </div>
+              <span class="msg-time">오후 3:45</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="typing-row" id="typingRow" style="display:none;">
+          <div class="msg-av">
+            {% with size='sm', mood='listening' %}{% include 'components/character.html' %}{% endwith %}
+          </div>
+          <div class="typing-bubble">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    {# 인풋 도크 #}
+    <div class="input-dock">
+      <div class="dock-inner">
+        <span class="dock-input-error" id="inputError"></span>
+        <form class="dock-box" id="chatForm">
+          <textarea class="dock-textarea" id="msgInput" rows="1"
+            placeholder="해피에게 편하게 이야기해 보세요..."
+            maxlength="2000"
+            aria-label="메시지 입력"></textarea>
+
+          <div class="dock-actions">
+            <div class="dock-left">
+              <div class="emotion-tags">
+                <button type="button" class="btn-emotion" data-e="😊 기쁨">😊 기쁨</button>
+                <button type="button" class="btn-emotion" data-e="😔 지침">😔 지침</button>
+                <button type="button" class="btn-emotion" data-e="🌱 희망">🌱 희망</button>
+              </div>
+              <span class="char-counter" id="charCounter">0/2000</span>
+            </div>
+            <button type="submit" class="btn-send" id="btnSend" disabled
+                    aria-label="메시지 전송">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
+                <path d="m22 2-7 20-4-9-9-4Z"/>
+                <path d="M22 2 11 13"/>
+              </svg>
+              <div class="send-spinner"></div>
+            </button>
+          </div>
+        </form>
+        <p class="dock-hint">
+          해피는 긍정과 공감을 전하는 AI 메이트입니다. 전문 상담을 대체하지 않습니다.
+        </p>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+{# 토스트 컨테이너 #}
+<div id="toastContainer"></div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+{% endblock %}

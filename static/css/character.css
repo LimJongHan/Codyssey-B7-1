@@ -1,0 +1,118 @@
+/* ==========================================================================
+   마스코트 해피 — 모션 & 크기 시스템
+   ========================================================================== */
+
+/* ── 래퍼 ── */
+.happi {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.happi--icon { width: 28px;  height: 28px; }
+.happi--sm   { width: 44px;  height: 44px; }
+.happi--md   { width: 80px;  height: 80px; }
+.happi--lg   { width: 180px; height: 180px; }
+
+/* ── SVG ── */
+.happi__svg {
+  width: 100%; height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+/* ── 글로우 후광 (sm 이상) ── */
+.happi__glow {
+  position: absolute;
+  inset: -15%;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(255, 184, 48, 0.45) 0%,
+    rgba(255, 140, 0, 0.18) 45%,
+    transparent 70%);
+  filter: blur(14px);
+  animation: glow-pulse 3.6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.happi__svg { position: relative; z-index: 1; }
+
+@keyframes glow-pulse {
+  0%, 100% { transform: scale(0.85); opacity: 0.50; }
+  50%       { transform: scale(1.15); opacity: 1.00; }
+}
+
+/* ── 1. 유영 모션 ── */
+.happi--cheerful .happi__svg,
+.happi--listening .happi__svg {
+  animation: happi-float 4.2s ease-in-out infinite;
+}
+
+@keyframes happi-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  35%       { transform: translateY(-6px) rotate(1.5deg); }
+  70%       { transform: translateY(-2px) rotate(-1deg); }
+}
+
+/* ── 2. 눈 깜빡임 ── */
+.happi__eyes {
+  animation: eye-blink 5.0s infinite;
+}
+
+@keyframes eye-blink {
+  0%, 88%, 92%, 100% { transform: scaleY(1); }
+  90%                 { transform: scaleY(0.08); }
+}
+
+/* ── 3. 광선 회전 (lg에서만) ── */
+.happi--lg .happi__rays {
+  transform-origin: 50px 50px;
+  animation: rays-spin 12s linear infinite;
+}
+
+@keyframes rays-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── 4. 환호 바운스 ── */
+.happi--cheering .happi__svg {
+  animation: cheer-bounce 1.4s ease-in-out infinite;
+}
+
+@keyframes cheer-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  45%       { transform: translateY(-12px) scale(1.08); }
+}
+
+/* ── 5. listening — 미세 흔들림 ── */
+.happi--listening .happi__svg {
+  animation: listening-sway 2.8s ease-in-out infinite;
+}
+
+@keyframes listening-sway {
+  0%, 100% { transform: rotate(0deg); }
+  30%       { transform: rotate(3deg); }
+  70%       { transform: rotate(-3deg); }
+}
+
+/* ── 호버 ── */
+.happi:hover .happi__svg {
+  animation: happi-hover 0.5s var(--ease-spring) forwards;
+}
+
+@keyframes happi-hover {
+  0%   { transform: scale(1); }
+  55%  { transform: scale(1.13) rotate(-4deg); }
+  100% { transform: scale(1.08) rotate(-2deg); }
+}
+
+.happi:hover .happi__glow {
+  animation: glow-pulse 1.5s ease-in-out infinite;
+}
+
+/* ── icon 크기에서 glow 비활성 ── */
+.happi--icon .happi__glow { display: none; }
