@@ -3,6 +3,8 @@ import math
 import os
 from typing import Literal, TypedDict
 
+from openai import APIError, APITimeoutError, AsyncOpenAI
+
 logger = logging.getLogger(__name__)
 SYSTEM_PROMPT = (
     "너는 사용자의 이야기에 공감하고 격려하는 긍정봇이다. "
@@ -37,4 +39,22 @@ async def generate_reply(messages: list[Message]) -> str:
         logger.error("ai_call_failure reason=configuration")
         raise AIError("AI 서비스 설정을 확인해 주세요.", 503) from None
 
-    raise AIError("AI 연결 구현 예정입니다.", status_code=503)
+    try:
+        async with AsyncOpenAI(api_key=api_key, timeout=timeout, max_retries=0) as client:
+            response = await client.responses.create(
+                model=model,
+                instructions=SYSTEM_PROMPT,
+                input=messages,
+                reasoning={"effort": "none"},
+                max_output_tokens=500,
+                store=False,
+            )
+    except APITimeoutError:
+        raise AIError("응답이 지연되고 있어요. 잠시 후 다시 시도해 주세요.", 504) from None
+    except APIError as error:
+        raise AIError("지금은 답변을 받을 수 없어요. 잠시 후 다시 시도해 주세요.") from None
+
+    answer = response.output_text.strip()
+    if response.status != "completed" or not answer:
+        raise AIError("답변을 완성하지 못했어요. 다시 시도해 주세요.")
+    return answer
