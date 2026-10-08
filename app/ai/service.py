@@ -30,7 +30,7 @@ class AIError(Exception):
 async def generate_reply(messages: list[Message]) -> str:
     """시간순 대화(마지막은 새 질문)를 받아 응답 텍스트만 반환한다."""
     api_key = os.getenv("AI_API_KEY", "").strip()
-    model = os.getenv("AI_MODEL", "").strip() or "gpt-6-luna"
+    model = os.getenv("AI_MODEL", "").strip() or "gpt-5-mini"
     try:
         timeout = float(os.getenv("AI_TIMEOUT_SECONDS", "30"))
         if not api_key or not math.isfinite(timeout) or timeout <= 0:
@@ -41,14 +41,15 @@ async def generate_reply(messages: list[Message]) -> str:
 
     logger.info("ai_call_start")
     try:
-        async with AsyncOpenAI(api_key=api_key, timeout=timeout, max_retries=0) as client:
-            response = await client.responses.create(
+        async with AsyncOpenAI(
+            api_key=api_key,
+            base_url="https://copa.codyssey.kr/v1",
+            timeout=timeout,
+            max_retries=0,
+        ) as client:
+            response = await client.chat.completions.create(
                 model=model,
-                instructions=SYSTEM_PROMPT,
-                input=messages,
-                reasoning={"effort": "none"},
-                max_output_tokens=500,
-                store=False,
+                messages=[{"role": "system", "content": SYSTEM_PROMPT}, *messages],
             )
     except APITimeoutError:
         logger.warning("ai_call_failure reason=timeout")
@@ -57,8 +58,9 @@ async def generate_reply(messages: list[Message]) -> str:
         logger.warning("ai_call_failure reason=%s", type(error).__name__)
         raise AIError("지금은 답변을 받을 수 없어요. 잠시 후 다시 시도해 주세요.") from None
 
-    answer = response.output_text.strip()
-    if response.status != "completed" or not answer:
+    choice = response.choices[0] if response.choices else None
+    answer = (choice.message.content or "").strip() if choice else ""
+    if not choice or choice.finish_reason != "stop" or not answer:
         logger.warning("ai_call_failure reason=invalid_response")
         raise AIError("답변을 완성하지 못했어요. 다시 시도해 주세요.")
     logger.info("ai_call_success")
