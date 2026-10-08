@@ -1,0 +1,153 @@
+/* ==========================================================================
+   마스코트 '해피(Happi)' 인터랙티브 모션 & 스타일
+   SoriAI 풍의 생동감 넘치고 따뜻한 마이크로 애니메이션 시스템
+   ========================================================================== */
+
+.happi-character-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  transition: transform var(--transition-normal);
+}
+
+/* 크기 변형 */
+.happi-size-sm {
+  width: 42px;
+  height: 42px;
+}
+.happi-size-md {
+  width: 76px;
+  height: 76px;
+}
+.happi-size-lg {
+  width: 170px;
+  height: 170px;
+}
+
+/* 앰비언트 오라 글로우 (뒤쪽 은은한 빛 펄스) */
+.happi-aura-glow {
+  position: absolute;
+  inset: -12%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 179, 0, 0.4) 0%, rgba(255, 152, 0, 0.12) 55%, transparent 75%);
+  filter: blur(14px);
+  animation: happi-aura 3.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.happi-mascot-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  animation: happi-float 4.2s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+.happi-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+/* 1. 플로팅 모션 (부드러운 유영) */
+@keyframes happi-float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(1.5deg);
+  }
+}
+
+/* 2. 앰비언트 펄스 오라 모션 */
+@keyframes happi-aura {
+  0%, 100% {
+    transform: scale(0.95);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.95;
+  }
+}
+
+/* 3. 자연스러운 눈 깜빡임 (Blink) */
+.happi-eyes {
+  transform-origin: 80px 78px;
+  animation: happi-blink 4.2s infinite;
+}
+
+@keyframes happi-blink {
+  0%, 94%, 98%, 100% {
+    transform: scaleY(1);
+  }
+  96% {
+    transform: scaleY(0.1);
+  }
+}
+
+/* 4. 안테나 살랑거림 (Sway) */
+.happi-sprout {
+  transform-origin: 80px 18px;
+  animation: happi-sprout-sway 3.2s ease-in-out infinite;
+}
+
+@keyframes happi-sprout-sway {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(8deg);
+  }
+}
+
+/* 5. 손 콩닥거림 */
+.happi-hands {
+  animation: happi-hands-bob 2.8s ease-in-out infinite;
+}
+
+@keyframes happi-hands-bob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+/* --- 호버 인터랙션 (사용자가 다가왔을 때 설레는 반응) --- */
+.happi-character-wrapper:hover .happi-mascot-container {
+  transform: scale(1.06) rotate(-3deg);
+  transition: transform 0.3s var(--ease-spring);
+}
+
+.happi-character-wrapper:hover .happi-mouth {
+  d: path("M68 93C72 106 88 106 92 93");
+  fill-opacity: 1;
+  transition: all 0.2s ease;
+}
+
+.happi-character-wrapper:hover .happi-aura-glow {
+  transform: scale(1.25);
+  opacity: 1;
+  background: radial-gradient(circle, rgba(255, 179, 0, 0.6) 0%, rgba(255, 152, 0, 0.25) 55%, transparent 75%);
+}
+
+/* 감정별 변형 (CSS 클래스) */
+.happi-mood-listening .happi-sprout {
+  animation: happi-sprout-sway 1.5s ease-in-out infinite;
+}
+
+.happi-mood-cheering .happi-mascot-container {
+  animation: happi-cheer-bounce 1.6s ease-in-out infinite;
+}
+
+@keyframes happi-cheer-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-12px) scale(1.05); }
+}
