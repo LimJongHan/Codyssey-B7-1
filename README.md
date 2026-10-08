@@ -122,11 +122,32 @@ sqlite3 -header -column .data/positive-bot.db 'SELECT r.user_id, e.* FROM exchan
 
 특정 사용자의 전체 대화 로그, 사용자별 방·대화 수 확인 SQL은 [채팅 기능명세의 대화 로그 확인](docs/chat.md#대화-로그-확인)에 있다.
 
-## Vercel 배포
+## 배포 (AWS EC2)
 
-프로젝트 루트를 Vercel에 연결하고 FastAPI 프리셋을 사용한다. 진입점은 `pyproject.toml`의 `app.main:app`이며, 의존성은 `uv.lock`으로 관리한다. 별도 프론트 빌드나 서비스 분리는 없다. 환경 변수는 Vercel 프로젝트 설정에 등록한다. [FastAPI 배포 문서](https://vercel.com/docs/frameworks/backend/fastapi)
+서비스 주소: **http://13.125.113.66**
 
-**배포 전 영구 DB 연결이 필요하다.** Vercel 함수의 로컬 SQLite는 인스턴스 사이에 공유되지 않고 영속성을 보장하지 않는다. `/tmp`로 옮기는 것도 해결책이 아니다. 현재는 Vercel에서 SQLite 자동 초기화를 생략하고 DB 접근을 차단한다. 화면·API 뼈대의 배포 형태만 준비됐으며 회원·대화 저장 서비스의 배포가 완성된 상태는 아니다. Vercel을 유지하려면 외부 DB를 결정하고 인증·채팅 SQL과 `app/db.py`를 함께 맞춰야 한다. [Vercel SQLite 제약](https://vercel.com/kb/guide/is-sqlite-supported-in-vercel)
+AWS EC2(Ubuntu, 서울 리전) 한 대에서 실행한다. nginx가 80번 포트로 요청을 받아 `127.0.0.1:8000`의 Uvicorn으로 전달한다. Uvicorn은 systemd 서비스 `positive-bot`으로 실행되어 서버 재부팅 후에도 자동으로 시작된다. 별도 프론트 빌드나 서비스 분리는 없다.
+
+```text
+브라우저 → nginx(:80) → Uvicorn app.main:app (127.0.0.1:8000, systemd) → SQLite(.data/positive-bot.db)
+```
+
+- DB는 서버 디스크의 SQLite 파일(`DATABASE_PATH`, 기본 `.data/positive-bot.db`)이다. 서비스 재시작과 재배포 후에도 데이터가 유지된다.
+- 환경 변수는 서버의 `.env`(권한 600)에 둔다. 키 목록은 `.env.example`과 같으며 `AI_API_KEY` 값은 저장소나 문서에 남기지 않는다.
+- 서버에는 `VERCEL`을 설정하지 않는다. 설정하면 `app/db.py`가 DB 접근을 막는다.
+- HTTP로 운영하므로 로그인 쿠키에 `Secure`가 붙지 않고 암호화되지 않은 채 전송된다. 도메인과 HTTPS는 적용하지 않았다.
+- Uvicorn은 `--proxy-headers --forwarded-allow-ips 127.0.0.1`로 실행해 nginx가 전달한 원래 요청 정보를 사용한다. SSE 응답에는 FastAPI가 `X-Accel-Buffering: no`를 붙이므로 nginx 버퍼링 설정을 따로 두지 않는다.
+
+서버에 최신 `main`을 반영하는 절차는 아래와 같다. `.env.example`에 새 키가 생기면 서버 `.env`에도 직접 추가한다. 서버 로그는 `journalctl -u positive-bot`으로 확인한다.
+
+```sh
+cd ~/positive-bot
+git pull
+uv sync --locked --no-dev
+sudo systemctl restart positive-bot
+```
+
+`pyproject.toml`의 `[tool.vercel]`과 `.vercelignore`는 이전 Vercel 배포 준비의 흔적이며 현재 배포에는 사용하지 않는다.
 
 ## 제출 전 확인
 
