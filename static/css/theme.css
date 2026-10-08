@@ -1,65 +1,96 @@
 /* ==========================================================================
    해피(Happi) — 글로벌 디자인 시스템
-   깊은 공간감 + 웜 앰버 글로우 + 액체 유리 레이어
+   딥 인디고 우주 배경 + 선샤인 골드 시그니처 + 글래스모피즘 레이어
    ========================================================================== */
 
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
 :root {
 
-  /* ── 배경 깊이 레이어 ── */
-  --bg-base:         #0B0D12;
-  --bg-layer1:       #10131A;
-  --bg-layer2:       #151922;
-  --bg-layer3:       #1C2030;
-  --bg-glass:        rgba(255, 255, 255, 0.038);
-  --bg-glass-hover:  rgba(255, 255, 255, 0.065);
-  --bg-glass-active: rgba(255, 162, 0, 0.09);
-  --bg-input:        rgba(255, 255, 255, 0.05);
+  /* ── 배경 깊이 레이어 (딥 인디고 우주) ── */
+  --bg-base:    #0E0B28;
+  --bg-layer1:  #13103A;
+  --bg-layer2:  #191550;
+  --bg-layer3:  #1F1B5E;
+  --bg-card:    rgba(255, 255, 255, 0.055);
+  --bg-card-hover: rgba(255, 255, 255, 0.088);
+  --bg-card-active:rgba(255, 200, 60, 0.10);
+  --bg-input:   rgba(255, 255, 255, 0.06);
 
-  /* ── 시그니처 웜 앰버 ── */
-  --amber:           #FFA200;
-  --amber-bright:    #FFBE00;
-  --amber-dim:       #C97A00;
-  --amber-glow-sm:   rgba(255, 162, 0, 0.15);
-  --amber-glow-md:   rgba(255, 162, 0, 0.28);
-  --amber-glow-lg:   rgba(255, 162, 0, 0.50);
+  /* ── 앰비언트 그라디언트 배경 ── */
+  --bg-ambient: radial-gradient(
+    ellipse 90% 60% at 50% -5%,
+    rgba(130, 100, 255, 0.22) 0%,
+    transparent 62%
+  ), radial-gradient(
+    ellipse 55% 45% at 92% 80%,
+    rgba(255, 180, 50, 0.10) 0%,
+    transparent 60%
+  ), radial-gradient(
+    ellipse 50% 40% at 5% 85%,
+    rgba(100, 80, 255, 0.12) 0%,
+    transparent 60%
+  );
+
+  /* ── 시그니처: 선샤인 골드 ── */
+  --gold:         #FFB830;
+  --gold-bright:  #FFD060;
+  --gold-deep:    #E08800;
+  --gold-glow-sm: rgba(255, 184, 48, 0.16);
+  --gold-glow-md: rgba(255, 184, 48, 0.30);
+  --gold-glow-lg: rgba(255, 184, 48, 0.52);
 
   /* ── 포인트 컬러 ── */
-  --blue:   #4E8FFF;
-  --teal:   #29C9BB;
-  --rose:   #FF6B81;
+  --lavender:  #A29BFE;
+  --coral:     #FF8C65;
+  --mint:      #29D9C2;
+  --pink:      #FFC2E8;
 
   /* ── 텍스트 계층 ── */
-  --text-hi:       #F0F2F7;
-  --text-pri:      #CDD2DC;
-  --text-sec:      #8692A6;
-  --text-dim:      #4E5868;
-  --text-off:      #303640;
-  --text-amber:    #FFA200;
+  --text-hi:   #F4F0FF;
+  --text-pri:  #D4CDEE;
+  --text-sec:  #9189B8;
+  --text-dim:  #5A5380;
+  --text-off:  #36315C;
+  --text-gold: #FFB830;
 
-  /* ── 보더 ── */
-  --border-sub:    rgba(255, 255, 255, 0.055);
-  --border-glass:  rgba(255, 255, 255, 0.09);
-  --border-amber:  rgba(255, 162, 0, 0.35);
-  --border-focus:  rgba(255, 162, 0, 0.65);
+  /* ── 유리 보더 ── */
+  --border-sub:   rgba(255, 255, 255, 0.07);
+  --border-glass: rgba(255, 255, 255, 0.13);
+  --border-gold:  rgba(255, 184, 48, 0.38);
+  --border-focus: rgba(255, 184, 48, 0.70);
 
   /* ── 그라디언트 ── */
-  --grad-amber:  linear-gradient(135deg, #FFB800 0%, #FF8E00 55%, #FF5000 100%);
-  --grad-radial: radial-gradient(ellipse 90% 55% at 50% -8%,
-                  rgba(255, 162, 0, 0.12) 0%, transparent 68%);
+  --grad-gold:   linear-gradient(135deg, #FFD060 0%, #FFB830 50%, #FF8C30 100%);
+  --grad-purple: linear-gradient(135deg, #A29BFE 0%, #7B6FE8 100%);
+  --grad-warm:   linear-gradient(135deg, #FF8C65 0%, #FFB830 100%);
+  --grad-card:   linear-gradient(
+    135deg,
+    rgba(255,255,255,0.10) 0%,
+    rgba(255,255,255,0.03) 100%
+  );
+
+  /* ── 글래스모피즘 ── */
+  --glass-bg:      rgba(19, 16, 58, 0.55);
+  --glass-border:  rgba(255, 255, 255, 0.12);
+  --glass-blur:    blur(22px) saturate(180%);
 
   /* ── 섀도우 ── */
-  --shadow-xs:      0 1px 4px rgba(0,0,0,0.40);
-  --shadow-sm:      0 3px 12px rgba(0,0,0,0.48);
-  --shadow-md:      0 8px 30px rgba(0,0,0,0.55);
-  --shadow-lg:      0 20px 64px rgba(0,0,0,0.60);
-  --shadow-amber:   0 6px 28px rgba(255, 162, 0, 0.26);
-  --shadow-amber-lg:0 12px 48px rgba(255, 162, 0, 0.36);
+  --shadow-xs:   0 1px 4px rgba(0,0,0,0.50);
+  --shadow-sm:   0 3px 14px rgba(0,0,0,0.55);
+  --shadow-md:   0 8px 32px rgba(0,0,0,0.58);
+  --shadow-lg:   0 20px 64px rgba(0,0,0,0.65);
+  --shadow-gold: 0 6px 28px rgba(255, 184, 48, 0.30);
+  --shadow-gold-lg: 0 12px 48px rgba(255, 184, 48, 0.42);
+  --shadow-card: 0 8px 32px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.10);
 
-  /* ── 블러 ── */
-  --blur-glass: blur(20px);
-  --blur-bg:    blur(90px);
+  /* ── 상태 컬러 ── */
+  --clr-error:   #FF6B8A;
+  --clr-warn:    #FFB830;
+  --clr-success: #29D9C2;
+  --clr-info:    #A29BFE;
+  --bg-error:    rgba(255, 107, 138, 0.12);
+  --bg-success:  rgba(41, 217, 194, 0.12);
 
   /* ── 곡률 ── */
   --r-xs:   6px;
@@ -69,9 +100,9 @@
   --r-xl:   30px;
   --r-full: 9999px;
 
-  /* ── 이징 & 트랜지션 ── */
-  --ease-spring:    cubic-bezier(0.16, 1, 0.30, 1);
-  --ease-out:       cubic-bezier(0.22, 1, 0.36, 1);
+  /* ── 이징 ── */
+  --ease-spring: cubic-bezier(0.16, 1, 0.30, 1);
+  --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
   --t-fast:   0.16s var(--ease-out);
   --t-normal: 0.26s var(--ease-out);
   --t-slow:   0.44s var(--ease-spring);
@@ -79,10 +110,11 @@
   /* ── 레이아웃 ── */
   --sidebar-w: 276px;
   --header-h:  60px;
+  --max-chat:  720px;
 }
 
 /* ==========================================================================
-   글로벌 리셋 & 기본값
+   글로벌 리셋
    ========================================================================== */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -101,12 +133,23 @@ html, body {
   overflow-x: hidden;
 }
 
+/* 앰비언트 배경 */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: var(--bg-ambient);
+  pointer-events: none;
+  z-index: 0;
+}
+
 button {
   cursor: pointer; border: none; background: none;
   font: inherit; outline: none;
-  transition: transform var(--t-fast), opacity var(--t-fast);
+  transition: transform var(--t-fast), opacity var(--t-fast), background var(--t-fast);
 }
-button:active { transform: scale(0.96); }
+button:active:not(:disabled) { transform: scale(0.96); }
+button:disabled { cursor: not-allowed; opacity: 0.45; }
 
 input, textarea {
   font: inherit; outline: none;
@@ -117,19 +160,18 @@ input, textarea {
 }
 input:focus, textarea:focus {
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px var(--amber-glow-sm);
+  box-shadow: 0 0 0 3px var(--gold-glow-sm);
 }
 input::placeholder, textarea::placeholder { color: var(--text-dim); }
-
 a { color: inherit; text-decoration: none; }
 ul { list-style: none; }
 
-/* ── 유리 카드 유틸 ── */
+/* ── 글래스 카드 유틸 ── */
 .glass {
-  background: var(--bg-glass);
-  backdrop-filter: var(--blur-glass);
-  -webkit-backdrop-filter: var(--blur-glass);
-  border: 1px solid var(--border-glass);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-lg);
 }
 
@@ -137,20 +179,67 @@ ul { list-style: none; }
 .live-dot {
   width: 7px; height: 7px;
   border-radius: 50%;
-  background: var(--teal);
-  box-shadow: 0 0 8px var(--teal);
+  background: var(--mint);
+  box-shadow: 0 0 8px var(--mint);
   animation: live-pulse 2.4s ease-in-out infinite;
 }
 @keyframes live-pulse {
-  0%,100% { opacity:1; box-shadow:0 0 8px var(--teal); }
-  50%      { opacity:.45; box-shadow:0 0 2px var(--teal); }
+  0%,100% { opacity:1; box-shadow: 0 0 8px var(--mint); }
+  50%      { opacity:.4; box-shadow: 0 0 2px var(--mint); }
 }
 
 /* ── 스크롤바 ── */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.12);
   border-radius: 99px;
 }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.20); }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+
+/* ==========================================================================
+   공통 토스트 알림 시스템
+   ========================================================================== */
+#toastContainer {
+  position: fixed;
+  top: 20px; right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: var(--r-md);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-md);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-hi);
+  min-width: 240px;
+  max-width: 360px;
+  animation: toast-in 0.3s var(--ease-spring);
+}
+
+.toast.toast--error   { border-color: var(--clr-error); }
+.toast.toast--success { border-color: var(--clr-success); }
+.toast.toast--warn    { border-color: var(--clr-warn); }
+
+@keyframes toast-in {
+  from { opacity:0; transform: translateX(24px); }
+  to   { opacity:1; transform: translateX(0); }
+}
+
+@keyframes toast-out {
+  from { opacity:1; transform: translateX(0); max-height: 80px; }
+  to   { opacity:0; transform: translateX(24px); max-height: 0; padding: 0; margin: 0; }
+}

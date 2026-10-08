@@ -1,151 +1,118 @@
 /* ==========================================================================
-   마스코트 해피 — 인터랙티브 모션 & 감정 시스템
+   마스코트 해피 — 모션 & 크기 시스템
    ========================================================================== */
 
-/* ── 래퍼 & 크기 변형 ── */
+/* ── 래퍼 ── */
 .happi {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  user-select: none;
   flex-shrink: 0;
+  user-select: none;
 }
 
-.happi--sm  { width: 44px;  height: 44px;  }
-.happi--md  { width: 84px;  height: 84px;  }
-.happi--lg  { width: 190px; height: 190px; }
+.happi--icon { width: 28px;  height: 28px; }
+.happi--sm   { width: 44px;  height: 44px; }
+.happi--md   { width: 80px;  height: 80px; }
+.happi--lg   { width: 180px; height: 180px; }
 
-/* ── 앰비언트 오라 ── */
-.happi__aura {
-  position: absolute;
-  inset: -20%;
-  border-radius: 50%;
-  background: radial-gradient(circle,
-    rgba(255, 162, 0, 0.38) 0%,
-    rgba(255, 100, 0, 0.14) 48%,
-    transparent 70%);
-  filter: blur(18px);
-  animation: aura-pulse 3.8s ease-in-out infinite;
-  pointer-events: none;
-  z-index: 0;
-}
-
-@keyframes aura-pulse {
-  0%, 100% { transform: scale(0.88); opacity: 0.55; }
-  50%       { transform: scale(1.18); opacity: 1.00; }
-}
-
-/* ── SVG 컨테이너 ── */
-.happi__body {
-  position: relative;
-  width: 100%; height: 100%;
-  z-index: 1;
-  animation: float 4.6s ease-in-out infinite;
-  transform-origin: center 60%;
-}
-
+/* ── SVG ── */
 .happi__svg {
   width: 100%; height: 100%;
   display: block;
   overflow: visible;
 }
 
-/* ── 1. 둥실 유영 ── */
-@keyframes float {
-  0%, 100% { transform: translateY(0)    rotate(0deg); }
-  33%       { transform: translateY(-7px) rotate(1.2deg); }
-  66%       { transform: translateY(-3px) rotate(-0.8deg); }
+/* ── 글로우 후광 (sm 이상) ── */
+.happi__glow {
+  position: absolute;
+  inset: -15%;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(255, 184, 48, 0.45) 0%,
+    rgba(255, 140, 0, 0.18) 45%,
+    transparent 70%);
+  filter: blur(14px);
+  animation: glow-pulse 3.6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.happi__svg { position: relative; z-index: 1; }
+
+@keyframes glow-pulse {
+  0%, 100% { transform: scale(0.85); opacity: 0.50; }
+  50%       { transform: scale(1.15); opacity: 1.00; }
+}
+
+/* ── 1. 유영 모션 ── */
+.happi--cheerful .happi__svg,
+.happi--listening .happi__svg {
+  animation: happi-float 4.2s ease-in-out infinite;
+}
+
+@keyframes happi-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  35%       { transform: translateY(-6px) rotate(1.5deg); }
+  70%       { transform: translateY(-2px) rotate(-1deg); }
 }
 
 /* ── 2. 눈 깜빡임 ── */
 .happi__eyes {
-  transform-origin: 100px 96px;
-  animation: blink 5.5s infinite;
+  animation: eye-blink 5.0s infinite;
 }
 
-@keyframes blink {
-  0%, 90%, 94%, 100% { transform: scaleY(1); }
-  92%                 { transform: scaleY(0.08); }
+@keyframes eye-blink {
+  0%, 88%, 92%, 100% { transform: scaleY(1); }
+  90%                 { transform: scaleY(0.08); }
 }
 
-/* ── 3. 안테나 살랑거림 ── */
-.happi__antenna {
-  transform-origin: 100px 16px;
-  animation: antenna-sway 2.8s ease-in-out infinite;
+/* ── 3. 광선 회전 (lg에서만) ── */
+.happi--lg .happi__rays {
+  transform-origin: 50px 50px;
+  animation: rays-spin 12s linear infinite;
 }
 
-@keyframes antenna-sway {
-  0%, 100% { transform: rotate(0deg); }
-  40%       { transform: rotate(9deg); }
-  80%       { transform: rotate(-5deg); }
+@keyframes rays-spin {
+  to { transform: rotate(360deg); }
 }
 
-/* ── 4. 손 콩닥 ── */
-.happi__hands {
-  animation: hands-bob 3.2s ease-in-out infinite;
-}
-
-@keyframes hands-bob {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-4px); }
-}
-
-/* ── 5. 귀 미세 진동 ── */
-.happi__ear--l {
-  transform-origin: 30px 78px;
-  animation: ear-wiggle-l 5.0s ease-in-out infinite;
-}
-.happi__ear--r {
-  transform-origin: 170px 78px;
-  animation: ear-wiggle-r 5.0s ease-in-out infinite;
-}
-
-@keyframes ear-wiggle-l {
-  0%, 100% { transform: rotate(-18deg); }
-  50%       { transform: rotate(-24deg); }
-}
-@keyframes ear-wiggle-r {
-  0%, 100% { transform: rotate(18deg); }
-  50%       { transform: rotate(24deg); }
-}
-
-/* ── 호버 인터랙션 ── */
-.happi:hover .happi__body {
-  animation: float-hover 0.55s var(--ease-spring) forwards;
-}
-
-@keyframes float-hover {
-  0%   { transform: scale(1)    rotate(0deg); }
-  40%  { transform: scale(1.10) rotate(-4deg); }
-  100% { transform: scale(1.07) rotate(-2deg); }
-}
-
-.happi:hover .happi__aura {
-  background: radial-gradient(circle,
-    rgba(255, 190, 0, 0.55) 0%,
-    rgba(255, 100, 0, 0.22) 50%,
-    transparent 72%);
-  animation: aura-pulse 1.8s ease-in-out infinite;
-}
-
-/* ── 감정 변형: listening ── */
-.happi--listening .happi__antenna {
-  animation: antenna-sway 1.2s ease-in-out infinite;
-}
-
-/* ── 감정 변형: cheering ── */
-.happi--cheering .happi__body {
-  animation: cheer-bounce 1.5s ease-in-out infinite;
+/* ── 4. 환호 바운스 ── */
+.happi--cheering .happi__svg {
+  animation: cheer-bounce 1.4s ease-in-out infinite;
 }
 
 @keyframes cheer-bounce {
   0%, 100% { transform: translateY(0) scale(1); }
-  45%       { transform: translateY(-14px) scale(1.06); }
+  45%       { transform: translateY(-12px) scale(1.08); }
 }
 
-/* ── sm 사이즈에서 오라 크기 축소 ── */
-.happi--sm .happi__aura {
-  inset: -30%;
-  filter: blur(10px);
+/* ── 5. listening — 미세 흔들림 ── */
+.happi--listening .happi__svg {
+  animation: listening-sway 2.8s ease-in-out infinite;
 }
+
+@keyframes listening-sway {
+  0%, 100% { transform: rotate(0deg); }
+  30%       { transform: rotate(3deg); }
+  70%       { transform: rotate(-3deg); }
+}
+
+/* ── 호버 ── */
+.happi:hover .happi__svg {
+  animation: happi-hover 0.5s var(--ease-spring) forwards;
+}
+
+@keyframes happi-hover {
+  0%   { transform: scale(1); }
+  55%  { transform: scale(1.13) rotate(-4deg); }
+  100% { transform: scale(1.08) rotate(-2deg); }
+}
+
+.happi:hover .happi__glow {
+  animation: glow-pulse 1.5s ease-in-out infinite;
+}
+
+/* ── icon 크기에서 glow 비활성 ── */
+.happi--icon .happi__glow { display: none; }

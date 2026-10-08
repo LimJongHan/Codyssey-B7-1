@@ -1,148 +1,107 @@
 {# ==========================================================================
-   컴포넌트: 긍정 마스코트 '해피(Happi)'
-   유기적 블롭 형태 + 입체감 + 반사광 + 감정 애니메이션
-   파라미터:
-     size  — 'sm'(40px) | 'md'(80px) | 'lg'(180px)
-     mood  — 'cheerful' | 'listening' | 'cheering'
+   마스코트 '해피' — 태양 페이스 (Sunshine Face) 컨셉
+   단순한 원형 얼굴 + 태양 광선 + 반짝이는 눈 + 활짝 웃는 입
+   size: 'icon'(28px) | 'sm'(44px) | 'md'(80px) | 'lg'(180px)
+   mood: 'cheerful' | 'listening' | 'cheering'
    ========================================================================== #}
 
+{%- set happi_id = size|default('md') -%}
 <div class="happi happi--{{ size|default('md') }} happi--{{ mood|default('cheerful') }}"
-     data-happi aria-label="해피 마스코트" role="img">
+     data-happi role="img" aria-label="해피 마스코트">
 
-  {# 뒤쪽 앰비언트 오라 레이어 #}
-  <div class="happi__aura"></div>
+  {% if size != 'icon' %}
+  <div class="happi__glow"></div>
+  {% endif %}
 
-  {# 캐릭터 SVG 본체 #}
-  <div class="happi__body">
-    <svg class="happi__svg" viewBox="0 0 200 200" fill="none"
-         xmlns="http://www.w3.org/2000/svg" overflow="visible">
-      <defs>
+  <svg class="happi__svg"
+       viewBox="0 0 100 100"
+       fill="none"
+       xmlns="http://www.w3.org/2000/svg"
+       overflow="visible">
+    <defs>
 
-        {# 메인 바디 그라디언트 — 입체 구체감 #}
-        <radialGradient id="happiBody{{ size }}"
-          cx="38%" cy="28%" r="72%" fx="38%" fy="28%">
-          <stop offset="0%"   stop-color="#FFD966"/>
-          <stop offset="42%"  stop-color="#FFA800"/>
-          <stop offset="78%"  stop-color="#E07800"/>
-          <stop offset="100%" stop-color="#BF5C00"/>
-        </radialGradient>
+      {# 메인 얼굴 그라디언트 #}
+      <radialGradient id="hFace_{{ happi_id }}"
+        cx="40%" cy="32%" r="70%" fx="40%" fy="32%">
+        <stop offset="0%"   stop-color="#FFE566"/>
+        <stop offset="50%"  stop-color="#FFB830"/>
+        <stop offset="85%"  stop-color="#F08A00"/>
+        <stop offset="100%" stop-color="#CC6600"/>
+      </radialGradient>
 
-        {# 뺨 그라디언트 #}
-        <radialGradient id="happiBlush{{ size }}"
-          cx="50%" cy="50%" r="50%">
-          <stop offset="0%"   stop-color="#FF4D6D" stop-opacity="0.55"/>
-          <stop offset="100%" stop-color="#FF4D6D" stop-opacity="0"/>
-        </radialGradient>
+      {# 빛 반사 하이라이트 #}
+      <radialGradient id="hShine_{{ happi_id }}"
+        cx="35%" cy="25%" r="50%">
+        <stop offset="0%"   stop-color="#FFFFFF" stop-opacity="0.68"/>
+        <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+      </radialGradient>
 
-        {# 상단 빛 반사 하이라이트 #}
-        <radialGradient id="happiShine{{ size }}"
-          cx="36%" cy="22%" r="45%">
-          <stop offset="0%"   stop-color="#FFFFFF" stop-opacity="0.72"/>
-          <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
-        </radialGradient>
+      {# 뺨 홍조 #}
+      <radialGradient id="hBlush_{{ happi_id }}"
+        cx="50%" cy="50%" r="50%">
+        <stop offset="0%"   stop-color="#FF85A2" stop-opacity="0.60"/>
+        <stop offset="100%" stop-color="#FF85A2" stop-opacity="0"/>
+      </radialGradient>
 
-        {# 바디 드롭 섀도우 필터 #}
-        <filter id="happiShadow{{ size }}" x="-20%" y="-10%" width="150%" height="140%">
-          <feDropShadow dx="0" dy="10" stdDeviation="14"
-            flood-color="#FF7A00" flood-opacity="0.30"/>
-        </filter>
+      {# 드롭 섀도우 #}
+      <filter id="hShadow_{{ happi_id }}" x="-25%" y="-15%" width="155%" height="150%">
+        <feDropShadow dx="0" dy="4" stdDeviation="8"
+          flood-color="#FF8800" flood-opacity="0.35"/>
+      </filter>
+    </defs>
 
-        {# 눈 빛 반사 필터 #}
-        <filter id="happiEyeGlow{{ size }}" x="-50%" y="-50%" width="200%" height="200%">
-          <feDropShadow dx="0" dy="0" stdDeviation="3"
-            flood-color="#FFFFFF" flood-opacity="0.5"/>
-        </filter>
-      </defs>
-
-      {# ── 1. 메인 바디 (유기적 블롭) ── #}
-      <g filter="url(#happiShadow{{ size }})">
-        <path class="happi__core" fill="url(#happiBody{{ size }})"
-          d="
-            M100 16
-            C 138 16, 172 42, 178 80
-            C 184 118, 166 152, 138 168
-            C 118 180, 82 180, 62 168
-            C 34 152, 16 118, 22 80
-            C 28 42, 62 16, 100 16 Z
-          "/>
+    {# ── 태양 광선 (lg, md 에서만 표시) ── #}
+    {% if size in ['lg', 'md'] %}
+    <g class="happi__rays" opacity="0.82">
+      {# 8방향 광선 — rotate 변환으로 균등 배치 #}
+      {% for angle in [0, 45, 90, 135, 180, 225, 270, 315] %}
+      <g transform="rotate({{ angle }}, 50, 50)">
+        <rect x="48" y="3" width="4" height="10"
+              rx="2" fill="#FFD060" opacity="0.9"/>
       </g>
+      {% endfor %}
+    </g>
+    {% endif %}
 
-      {# ── 2. 상단 하이라이트 (반사광) ── #}
-      <ellipse fill="url(#happiShine{{ size }})"
-        cx="82" cy="54" rx="34" ry="22"
-        transform="rotate(-18 82 54)"/>
+    {# ── 메인 얼굴 원 ── #}
+    <g filter="url(#hShadow_{{ happi_id }})">
+      <circle cx="50" cy="50" r="36"
+              fill="url(#hFace_{{ happi_id }})"/>
+    </g>
 
-      {# ── 3. 귀 (양쪽) ── #}
-      <ellipse class="happi__ear happi__ear--l"
-        cx="30" cy="78" rx="13" ry="10"
-        fill="#E07800" transform="rotate(-18 30 78)"/>
-      <ellipse class="happi__ear happi__ear--r"
-        cx="170" cy="78" rx="13" ry="10"
-        fill="#E07800" transform="rotate(18 170 78)"/>
-      <ellipse cx="30"  cy="78" rx="7" ry="5.5"
-        fill="#FFD27A" transform="rotate(-18 30 78)"/>
-      <ellipse cx="170" cy="78" rx="7" ry="5.5"
-        fill="#FFD27A" transform="rotate(18 170 78)"/>
+    {# ── 하이라이트 ── #}
+    <ellipse cx="40" cy="37" rx="13" ry="9"
+             fill="url(#hShine_{{ happi_id }})"
+             transform="rotate(-18 40 37)"/>
 
-      {# ── 4. 왕관/안테나 (캐릭터 포인트) ── #}
-      <g class="happi__antenna">
-        <line x1="100" y1="16" x2="100" y2="0"
-          stroke="#FFD27A" stroke-width="3.5" stroke-linecap="round"/>
-        <circle cx="100" cy="-3" r="6.5" fill="#FFBE00"/>
-        <circle cx="100" cy="-3" r="3.5" fill="#FFFFFF" fill-opacity="0.55"/>
+    {# ── 눈 (반짝 별 모양) ── #}
+    <g class="happi__eyes">
+      {# 왼쪽 눈 #}
+      <g class="happi__eye happi__eye--l">
+        <circle cx="38" cy="48" r="6" fill="#1A1040"/>
+        <circle cx="35.5" cy="45.5" r="2" fill="#FFFFFF"/>
+        <circle cx="40" cy="51" r="1" fill="#FFFFFF" fill-opacity="0.45"/>
       </g>
-
-      {# ── 5. 눈 ── #}
-      <g class="happi__eyes" filter="url(#happiEyeGlow{{ size }})">
-
-        {# 왼쪽 눈 #}
-        <g class="happi__eye happi__eye--l">
-          <ellipse cx="74" cy="96" rx="12" ry="14" fill="#1A1C22"/>
-          <ellipse cx="74" cy="96" rx="10" ry="12" fill="#2A2D38"/>
-          <circle  cx="70" cy="91"  r="4.5" fill="#FFFFFF"/>
-          <circle  cx="78" cy="100" r="2"   fill="#FFFFFF" fill-opacity="0.5"/>
-          {# 눈 하이라이트 포인트 #}
-          <circle cx="69" cy="90" r="2" fill="#FFFFFF"/>
-        </g>
-
-        {# 오른쪽 눈 #}
-        <g class="happi__eye happi__eye--r">
-          <ellipse cx="126" cy="96" rx="12" ry="14" fill="#1A1C22"/>
-          <ellipse cx="126" cy="96" rx="10" ry="12" fill="#2A2D38"/>
-          <circle  cx="122" cy="91"  r="4.5" fill="#FFFFFF"/>
-          <circle  cx="130" cy="100" r="2"   fill="#FFFFFF" fill-opacity="0.5"/>
-          <circle cx="121" cy="90" r="2" fill="#FFFFFF"/>
-        </g>
+      {# 오른쪽 눈 #}
+      <g class="happi__eye happi__eye--r">
+        <circle cx="62" cy="48" r="6" fill="#1A1040"/>
+        <circle cx="59.5" cy="45.5" r="2" fill="#FFFFFF"/>
+        <circle cx="64" cy="51" r="1" fill="#FFFFFF" fill-opacity="0.45"/>
       </g>
+    </g>
 
-      {# ── 6. 뺨 홍조 ── #}
-      <ellipse cx="55"  cy="116" rx="16" ry="10"
-        fill="url(#happiBlush{{ size }})"/>
-      <ellipse cx="145" cy="116" rx="16" ry="10"
-        fill="url(#happiBlush{{ size }})"/>
+    {# ── 뺨 홍조 ── #}
+    <ellipse cx="28" cy="58" rx="9" ry="6"
+             fill="url(#hBlush_{{ happi_id }})"/>
+    <ellipse cx="72" cy="58" rx="9" ry="6"
+             fill="url(#hBlush_{{ happi_id }})"/>
 
-      {# ── 7. 입 — mood에 따라 CSS transform으로 제어 ── #}
-      <g class="happi__mouth">
-        {# cheerful: 크게 웃는 입 #}
-        <path class="happi__mouth--smile"
-          d="M78 130 Q100 152 122 130"
-          stroke="#1A1C22" stroke-width="4" stroke-linecap="round" fill="none"/>
-        {# 치아(웃을 때 살짝 보이는) #}
-        <path class="happi__mouth--teeth"
-          d="M82 132 Q100 148 118 132"
-          fill="#FFFFFF" fill-opacity="0.7"/>
-      </g>
+    {# ── 입 (활짝 웃는 크레센트) ── #}
+    <g class="happi__mouth">
+      <path d="M 37 62 Q 50 76 63 62"
+            stroke="#1A1040" stroke-width="2.8"
+            stroke-linecap="round" fill="none"/>
+    </g>
 
-      {# ── 8. 손 (조약돌 형태) ── #}
-      <g class="happi__hands">
-        <ellipse class="happi__hand happi__hand--l"
-          cx="22" cy="124" rx="10" ry="8"
-          fill="#E07800" transform="rotate(-12 22 124)"/>
-        <ellipse class="happi__hand happi__hand--r"
-          cx="178" cy="124" rx="10" ry="8"
-          fill="#E07800" transform="rotate(12 178 124)"/>
-      </g>
-
-    </svg>
-  </div>
+  </svg>
 </div>

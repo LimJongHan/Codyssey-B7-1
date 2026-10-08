@@ -1,28 +1,16 @@
 /* ==========================================================================
    Page 1 — 로그인 / 회원가입
-   좌: 브랜드 몰입형 + 마스코트 / 우: 컴팩트 인증 카드
+   딥 인디고 배경 + 선샤인 골드 + 글래스모피즘
    ========================================================================== */
 
 /* ── 전체 레이아웃 ── */
 .auth-page {
+  position: relative;
   width: 100vw; height: 100vh;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.05fr 0.95fr;
   overflow: hidden;
-  position: relative;
-}
-
-/* ── 앰비언트 배경 오브젝트 ── */
-.auth-page::before {
-  content: '';
-  position: absolute;
-  width: 700px; height: 700px;
-  border-radius: 50%;
-  background: radial-gradient(circle,
-    rgba(255, 162, 0, 0.08) 0%, transparent 68%);
-  top: -200px; left: -100px;
-  pointer-events: none;
-  z-index: 0;
+  z-index: 1;
 }
 
 /* ==========================================================================
@@ -30,133 +18,141 @@
    ========================================================================== */
 .auth-brand {
   position: relative;
-  z-index: 1;
-  background: linear-gradient(160deg, #12151E 0%, #0D0F16 55%, #0B0D12 100%);
-  border-right: 1px solid var(--border-sub);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  padding: 48px 44px;
+  padding: 44px 48px;
   overflow: hidden;
+  border-right: 1px solid var(--border-sub);
 }
 
-/* 상단 그라디언트 오브젝트 */
+/* 유리 패널 효과 */
 .auth-brand::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: var(--grad-radial);
-  pointer-events: none;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  z-index: 0;
 }
 
-/* 상단 로고/태그 */
-.brand-top {
-  position: relative;
-  z-index: 2;
+/* 상단 광원 #1 */
+.auth-brand::after {
+  content: '';
+  position: absolute;
+  width: 500px; height: 500px;
+  top: -200px; left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(255, 184, 48, 0.20) 0%,
+    transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.auth-brand > * { position: relative; z-index: 1; }
+
+/* ── 로고 (클릭 → 홈) ── */
+.brand-logo-link {
   width: 100%;
   display: flex;
   align-items: center;
   gap: 10px;
+  align-self: flex-start;
+  transition: opacity var(--t-fast);
+}
+.brand-logo-link:hover { opacity: 0.82; }
+
+.brand-logo-icon {
+  width: 34px; height: 34px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 50%;
 }
 
-.brand-top-name {
-  font-size: 17px;
+.brand-logo-name {
+  font-size: 18px;
   font-weight: 800;
   color: var(--text-hi);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
 }
 
-.brand-top-tag {
+.brand-logo-tag {
   display: flex;
   align-items: center;
   gap: 5px;
   padding: 3px 9px;
   border-radius: var(--r-full);
-  background: var(--amber-glow-sm);
-  border: 1px solid var(--border-amber);
+  background: var(--gold-glow-sm);
+  border: 1px solid var(--border-gold);
   font-size: 11px;
   font-weight: 700;
-  color: var(--amber-bright);
+  color: var(--gold-bright);
 }
 
-/* 중앙 마스코트 & 메시지 */
+/* ── 마스코트 & 말풍선 ── */
 .brand-center {
-  position: relative;
-  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 28px;
+  gap: 24px;
 }
 
 .brand-mascot-wrap {
-  position: relative;
-  filter: drop-shadow(0 20px 40px rgba(255, 140, 0, 0.28));
+  filter: drop-shadow(0 16px 32px rgba(255, 140, 0, 0.30));
 }
 
-/* 말풍선 */
 .brand-bubble {
-  background: var(--bg-glass);
-  backdrop-filter: var(--blur-glass);
-  -webkit-backdrop-filter: var(--blur-glass);
-  border: 1px solid var(--border-glass);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-xl);
-  padding: 20px 28px;
-  position: relative;
-  max-width: 360px;
+  padding: 22px 28px;
+  max-width: 340px;
   text-align: center;
+  position: relative;
+  box-shadow: var(--shadow-card);
 }
 
-/* 말풍선 꼬리 */
 .brand-bubble::before {
   content: '';
   position: absolute;
   top: -10px; left: 50%;
   transform: translateX(-50%);
-  width: 0; height: 0;
   border-left: 10px solid transparent;
   border-right: 10px solid transparent;
-  border-bottom: 10px solid var(--border-glass);
-}
-.brand-bubble::after {
-  content: '';
-  position: absolute;
-  top: -8px; left: 50%;
-  transform: translateX(-50%);
-  width: 0; height: 0;
-  border-left: 9px solid transparent;
-  border-right: 9px solid transparent;
-  border-bottom: 9px solid rgba(255,255,255,0.038);
+  border-bottom: 10px solid var(--glass-border);
 }
 
-.bubble-greeting {
-  font-size: 18px;
+.bubble-title {
+  font-size: 17px;
   font-weight: 800;
   color: var(--text-hi);
   letter-spacing: -0.025em;
-  margin-bottom: 6px;
+  margin-bottom: 7px;
 }
 
-.bubble-greeting em {
+.bubble-title em {
   font-style: normal;
-  color: var(--amber);
+  color: var(--gold);
 }
 
 .bubble-sub {
   font-size: 13px;
   color: var(--text-sec);
-  line-height: 1.55;
+  line-height: 1.6;
 }
 
-/* 하단 특징 필 */
+/* ── 특징 목록 ── */
 .brand-features {
-  position: relative;
-  z-index: 2;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 9px;
-  width: 100%;
+  gap: 8px;
 }
 
 .feature-row {
@@ -164,7 +160,7 @@
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: var(--bg-glass);
+  background: rgba(255,255,255,0.04);
   border: 1px solid var(--border-sub);
   border-radius: var(--r-md);
   font-size: 13px;
@@ -174,16 +170,17 @@
 }
 
 .feature-row:hover {
-  background: var(--bg-glass-hover);
+  background: rgba(255,255,255,0.07);
   color: var(--text-pri);
   border-color: var(--border-glass);
+  transform: translateX(2px);
 }
 
 .feature-icon {
   width: 32px; height: 32px;
   border-radius: var(--r-sm);
-  background: var(--amber-glow-sm);
-  border: 1px solid var(--border-amber);
+  background: var(--gold-glow-sm);
+  border: 1px solid var(--border-gold);
   display: flex; align-items: center; justify-content: center;
   font-size: 14px;
   flex-shrink: 0;
@@ -193,25 +190,21 @@
    오른쪽 — 인증 카드
    ========================================================================== */
 .auth-form-side {
-  position: relative;
-  z-index: 1;
-  background: var(--bg-layer1);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 48px 44px;
+  padding: 44px 48px;
   overflow-y: auto;
+  position: relative;
+  z-index: 1;
 }
 
 .auth-card {
   width: 100%;
-  max-width: 390px;
+  max-width: 380px;
 }
 
-/* 카드 헤더 */
-.auth-card-header {
-  margin-bottom: 28px;
-}
+.auth-card-header { margin-bottom: 26px; }
 
 .auth-title {
   font-size: 26px;
@@ -226,7 +219,7 @@
   color: var(--text-sec);
 }
 
-/* 세그먼트 탭 스위처 */
+/* ── 세그먼트 탭 ── */
 .auth-tabs {
   position: relative;
   display: flex;
@@ -234,7 +227,7 @@
   border: 1px solid var(--border-sub);
   border-radius: var(--r-md);
   padding: 4px;
-  margin-bottom: 28px;
+  margin-bottom: 26px;
 }
 
 .auth-tab-btn {
@@ -248,40 +241,30 @@
   border-radius: var(--r-sm);
   transition: color var(--t-fast);
 }
-
-.auth-tab-btn.is-active {
-  color: var(--text-hi);
-}
+.auth-tab-btn.is-active { color: var(--text-hi); }
 
 .tab-track {
   position: absolute;
   top: 4px; left: 4px;
   width: calc(50% - 4px);
   height: calc(100% - 8px);
-  background: var(--bg-layer3);
-  border: 1px solid var(--border-glass);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-xs);
   transition: transform 0.28s var(--ease-spring);
   z-index: 1;
 }
+.auth-tabs.tab--register .tab-track { transform: translateX(100%); }
 
-.auth-tabs.tab--register .tab-track {
-  transform: translateX(100%);
-}
-
-/* 인풋 그룹 */
+/* ── 폼 ── */
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
-.field-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
+.field-group { display: flex; flex-direction: column; gap: 6px; }
 
 .field-label {
   font-size: 12.5px;
@@ -299,15 +282,15 @@
 .field-icon {
   position: absolute;
   left: 14px;
-  font-size: 15px;
+  font-size: 14px;
   pointer-events: none;
-  opacity: 0.55;
+  opacity: 0.50;
 }
 
 .field-input {
   width: 100%;
   height: 50px;
-  padding: 0 16px 0 44px;
+  padding: 0 14px 0 42px;
   border-radius: var(--r-md);
   border: 1.5px solid var(--border-sub);
   background: var(--bg-input);
@@ -319,14 +302,29 @@
 
 .field-input:hover:not(:focus) {
   border-color: var(--border-glass);
-  background: rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.08);
 }
 
 .field-input:focus {
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px var(--amber-glow-sm);
-  background: rgba(255,255,255,0.07);
+  box-shadow: 0 0 0 3px var(--gold-glow-sm);
+  background: rgba(255,255,255,0.08);
 }
+
+.field-input.is-error {
+  border-color: var(--clr-error) !important;
+  box-shadow: 0 0 0 3px rgba(255,107,138,0.15) !important;
+}
+
+/* 인풋 에러 메시지 */
+.field-error {
+  font-size: 11.5px;
+  color: var(--clr-error);
+  font-weight: 600;
+  display: none;
+  padding: 2px 2px 0;
+}
+.field-error.is-visible { display: block; }
 
 .btn-pw-toggle {
   position: absolute;
@@ -338,38 +336,55 @@
 }
 .btn-pw-toggle:hover { color: var(--text-sec); }
 
-/* 제출 버튼 */
+/* ── 제출 버튼 ── */
 .btn-submit {
-  margin-top: 8px;
+  position: relative;
+  margin-top: 6px;
   height: 52px;
   border-radius: var(--r-md);
-  background: var(--grad-amber);
-  color: #0B0D12;
+  background: var(--grad-gold);
+  color: #1A1040;
   font-size: 15px;
   font-weight: 800;
   letter-spacing: -0.01em;
   display: flex; align-items: center; justify-content: center; gap: 8px;
-  box-shadow: var(--shadow-amber);
-  transition: filter var(--t-fast), transform var(--t-fast), box-shadow var(--t-fast);
+  box-shadow: var(--shadow-gold);
   border: none; cursor: pointer; width: 100%;
+  overflow: hidden;
+  transition: filter var(--t-fast), transform var(--t-fast), box-shadow var(--t-fast);
 }
 
-.btn-submit:hover {
-  filter: brightness(1.06);
+.btn-submit:hover:not(:disabled) {
+  filter: brightness(1.08);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-amber-lg);
+  box-shadow: var(--shadow-gold-lg);
 }
 
-.btn-submit:active {
-  transform: translateY(0) scale(0.98);
-  box-shadow: var(--shadow-amber);
+.btn-submit:active:not(:disabled) {
+  transform: scale(0.98);
+  filter: brightness(0.98);
 }
 
-/* 구분선 */
+/* 버튼 로딩 스피너 */
+.btn-submit .spinner {
+  display: none;
+  width: 18px; height: 18px;
+  border: 2.5px solid rgba(26,16,64,0.3);
+  border-top-color: #1A1040;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.btn-submit.is-loading .btn-label { display: none; }
+.btn-submit.is-loading .spinner   { display: block; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── 구분선 ── */
 .auth-divider {
   position: relative;
   text-align: center;
-  margin: 20px 0 16px;
+  margin: 18px 0 14px;
 }
 
 .auth-divider::before {
@@ -382,20 +397,20 @@
 
 .auth-divider span {
   position: relative;
-  background: var(--bg-layer1);
+  background: var(--bg-base);
   padding: 0 12px;
   font-size: 12px;
   color: var(--text-dim);
   font-weight: 500;
 }
 
-/* 게스트 버튼 */
+/* ── 게스트 버튼 ── */
 .btn-guest {
   width: 100%;
   height: 46px;
   border-radius: var(--r-md);
-  border: 1.5px solid var(--border-sub);
-  background: transparent;
+  border: 1.5px solid var(--border-glass);
+  background: rgba(255,255,255,0.04);
   color: var(--text-sec);
   font-size: 13.5px;
   font-weight: 700;
@@ -405,7 +420,7 @@
 }
 
 .btn-guest:hover {
-  background: var(--bg-glass-hover);
+  background: rgba(255,255,255,0.08);
   border-color: var(--border-glass);
   color: var(--text-pri);
 }
@@ -422,5 +437,4 @@
 @media (max-width: 860px) {
   .auth-page { grid-template-columns: 1fr; }
   .auth-brand { display: none; }
-  .auth-form-side { background: var(--bg-base); }
 }
