@@ -14,6 +14,7 @@
   const GUEST_LIMIT    = 5;    // 게스트 최대 대화 횟수
   const RETRY_DELAY    = 1200; // 재시도 최소 간격(ms)
   const SEND_TIMEOUT   = 40_000; // 서버 AI 제한 시간(30초)보다 길게 두어 서버의 504 안내를 먼저 받는다
+  const ROOM_TITLE_LEN = 30;   // 새 대화의 첫 질문 앞부분을 방 제목으로 쓴다
 
   /* ==========================================================================
      DOM 참조
@@ -133,44 +134,80 @@
   backdrop?.addEventListener('click', closeSidebar);
 
   /* ==========================================================================
-     채팅 목록 인터랙션
+     채팅방 목록 · 이전 대화 (GET /api/rooms, GET /api/rooms/{id}/messages)
      ========================================================================== */
-  document.querySelectorAll('.chat-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-      if (e.target.closest('.item-actions')) return;
-      document.querySelectorAll('.chat-item').forEach(c => c.classList.remove('is-active'));
-      item.classList.add('is-active');
-      const title = item.querySelector('.chat-title')?.textContent;
-      if (headerTitle && title) headerTitle.textContent = title;
-      if (window.innerWidth <= 768) closeSidebar();
-    });
-  });
+  const roomList = document.getElementById('chatHistoryList');
+  let activeRoomId = null; // null이면 새 대화. 첫 질문을 보낼 때 방을 만든다
 
-  document.querySelectorAll('.btn-item-act').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const { action } = btn.dataset;
-      const item = btn.closest('.chat-item');
-      if (action === 'fav') {
-        btn.classList.toggle('fav-on');
-        btn.title = btn.classList.contains('fav-on') ? '즐겨찾기 해제' : '즐겨찾기';
-      } else if (action === 'delete') {
-        item.style.transition = 'all 0.22s ease';
-        item.style.opacity = '0';
-        item.style.height  = item.offsetHeight + 'px';
-        setTimeout(() => {
-          item.style.height  = '0';
-          item.style.padding = '0';
-          item.style.overflow = 'hidden';
-          setTimeout(() => item.remove(), 200);
-        }, 120);
-      }
+  function markActiveRoom () {
+    roomList?.querySelectorAll('.chat-item').forEach(item => {
+      item.classList.toggle('is-active', Number(item.dataset.id) === activeRoomId);
     });
-  });
+  }
 
-  /* 새 대화 */
+  function renderRoom (room, { prepend = false } = {}) {
+    const item  = document.createElement('li');
+    const emoji = document.createElement('span');
+    const title = document.createElement('span');
+    item.className  = 'chat-item';
+    item.dataset.id = String(room.id);
+    emoji.className = 'chat-emoji';
+    emoji.textContent = '💬';
+    title.className = 'chat-title';
+    title.textContent = room.title;
+    item.append(emoji, title);
+    item.addEventListener('click', () => openRoom(room));
+    prepend ? roomList?.prepend(item) : roomList?.append(item);
+  }
+
+  async function loadRooms () {
+    try {
+      const res = await fetch('/api/rooms', { credentials: 'same-origin' });
+      if (res.status === 401) return; // 비로그인: 목록 없이 게스트 안내만 보인다
+      if (!res.ok) throw new Error(`rooms ${res.status}`);
+      const rooms = await res.json();
+      roomList?.replaceChildren();
+      rooms.forEach(room => renderRoom(room));
+      markActiveRoom();
+    } catch {
+      showToast('대화 목록을 불러오지 못했어요.', 'error');
+    }
+  }
+
+  async function openRoom (room) {
+    if (isSending) {
+      showToast('답변을 기다리는 중이에요.', 'warn', 2000);
+      return;
+    }
+    activeRoomId = room.id;
+    markActiveRoom();
+    if (headerTitle) headerTitle.textContent = room.title;
+    if (msgList) msgList.replaceChildren();
+    if (window.innerWidth <= 768) closeSidebar();
+    try {
+      const res = await fetch(`/api/rooms/${room.id}/messages`, { credentials: 'same-origin' });
+      if (!res.ok) throw new Error(`messages ${res.status}`);
+      const exchanges = await res.json();
+      if (activeRoomId !== room.id) return; // 그사이 다른 방을 열었으면 무시한다
+      if (welcomeBanner) welcomeBanner.style.display = exchanges.length ? 'none' : '';
+      exchanges.forEach(exchange => {
+        const time = new Date(exchange.created_at);
+        appendMsg(exchange.question, 'user', { time });
+        appendMsg(exchange.answer, 'bot', { time });
+      });
+    } catch {
+      if (activeRoomId === room.id) showToast('이전 대화를 불러오지 못했어요.', 'error');
+    }
+  }
+
+  /* 새 대화: 화면만 비우고, 방은 첫 질문을 보낼 때 만든다 */
   btnNewChat?.addEventListener('click', () => {
-    document.querySelectorAll('.chat-item').forEach(c => c.classList.remove('is-active'));
+    if (isSending) {
+      showToast('답변을 기다리는 중이에요.', 'warn', 2000);
+      return;
+    }
+    activeRoomId = null;
+    markActiveRoom();
     if (msgList) msgList.innerHTML = '';
     if (welcomeBanner) welcomeBanner.style.display = '';
     if (headerTitle) headerTitle.textContent = '새로운 대화 ✨';
@@ -270,11 +307,10 @@
   /* ==========================================================================
      메시지 렌더링
      ========================================================================== */
-  const nowStr = () => {
-    const d = new Date();
+  const formatTime = (d = new Date()) => {
     const h = d.getHours();
     const m = String(d.getMinutes()).padStart(2, '0');
-    return `오${h < 12 ? '전' : '후'} ${h < 13 ? h : h - 12}:${m}`;
+    return `오${h < 12 ? '전' : '후'} ${h % 12 || 12}:${m}`;
   };
 
   const escHtml = s => s
@@ -323,7 +359,7 @@
     const row = document.createElement('div');
     row.className = `msg-row msg-row--${role}`;
 
-    const timeStr = nowStr();
+    const timeStr = formatTime(extra.time); // 이전 대화는 저장 시각, 새 메시지는 현재 시각
 
     if (role === 'bot') {
       row.innerHTML = `
@@ -416,39 +452,36 @@
     }
 
     try {
-      // 1. 활성 방 ID 확인 (기본값 1, 또는 팀 백엔드 방 생성)
-      let roomId = sessionStorage.getItem('happi_active_room_id') || '1';
+      // 1. 새 대화면 첫 질문 앞부분을 제목으로 방을 만든다 (POST /api/rooms).
+      //    만들기에 실패하면 그 응답을 아래 오류 처리로 넘긴다.
+      let res;
+      if (activeRoomId === null) {
+        const title = Array.from(text.replace(/\s+/g, ' ')).slice(0, ROOM_TITLE_LEN).join('');
+        res = await fetch('/api/rooms', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body:    JSON.stringify({ title }),
+          credentials: 'same-origin',
+        });
+        if (res.ok) {
+          const room = await res.json();
+          activeRoomId = room.id;
+          renderRoom(room, { prepend: true });
+          markActiveRoom();
+          if (headerTitle) headerTitle.textContent = room.title;
+        }
+      }
 
       // 2. 팀 백엔드 규격: POST /api/rooms/{room_id}/messages with {"question": text}
       // 네트워크 오류·시간 초과는 아래 catch에서 오류로 안내한다. 대체 답변을 만들지 않는다.
-      let res = await fetch(`/api/rooms/${roomId}/messages`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body:    JSON.stringify({ question: text }),
-        credentials: 'same-origin',
-        signal:  AbortSignal.timeout(SEND_TIMEOUT),
-      });
-
-      // 만약 404(방 없음)이면 새 방 생성 시도 후 재전송
-      if (res.status === 404) {
-        const createRoomRes = await fetch('/api/rooms', {
-          method: 'POST',
+      if (activeRoomId !== null) {
+        res = await fetch(`/api/rooms/${activeRoomId}/messages`, {
+          method:  'POST',
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify({ title: '오늘의 대화' }),
-          credentials: 'same-origin'
+          body:    JSON.stringify({ question: text }),
+          credentials: 'same-origin',
+          signal:  AbortSignal.timeout(SEND_TIMEOUT),
         });
-        if (createRoomRes.ok) {
-          const newRoom = await createRoomRes.json();
-          roomId = String(newRoom.id);
-          sessionStorage.setItem('happi_active_room_id', roomId);
-          res = await fetch(`/api/rooms/${roomId}/messages`, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body:    JSON.stringify({ question: text }),
-            credentials: 'same-origin',
-            signal:  AbortSignal.timeout(SEND_TIMEOUT),
-          });
-        }
       }
 
       if (!res.ok) {
@@ -546,5 +579,6 @@
 
   /* 초기 상태 동기화 */
   syncSendButton();
+  loadRooms();
 
 })();

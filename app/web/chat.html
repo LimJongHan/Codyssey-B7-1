@@ -93,48 +93,7 @@
 
     <div class="sidebar-scroll">
 
-      <!-- 즐겨찾기 -->
-      <div>
-        <div class="sec-header">
-          <span class="sec-label">
-            <svg width="10" height="10" viewBox="0 0 24 24"
-                 fill="#FFB830" stroke="#FFB830" stroke-width="1.5">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02
-                               12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-            </svg>
-            즐겨찾기
-          </span>
-          <span class="sec-count" id="favCount">2</span>
-        </div>
-        <ul class="chat-list" id="favList">
-          <li class="chat-item is-active" data-id="fav-1">
-            <span class="chat-emoji">☀️</span>
-            <span class="chat-title">힘든 날 읽는 긍정 확언 5가지</span>
-            <div class="item-actions">
-              <button class="btn-item-act fav-on" data-action="fav" title="즐겨찾기 해제">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="#FFD060" stroke="#FFB830" stroke-width="2">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02
-                                   12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                </svg>
-              </button>
-            </div>
-          </li>
-          <li class="chat-item" data-id="fav-2">
-            <span class="chat-emoji">🌱</span>
-            <span class="chat-title">자존감 회복을 위한 대화</span>
-            <div class="item-actions">
-              <button class="btn-item-act fav-on" data-action="fav" title="즐겨찾기 해제">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="#FFD060" stroke="#FFB830" stroke-width="2">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02
-                                   12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                </svg>
-              </button>
-            </div>
-          </li>
-        </ul>
-      </div>
-
-      <!-- 최근 대화 -->
+      <!-- 최근 대화: chat.js가 GET /api/rooms 결과로 채운다 -->
       <div>
         <div class="sec-header">
           <span class="sec-label">
@@ -146,59 +105,7 @@
           </span>
         </div>
         <div class="time-group">
-          <span class="time-label">오늘</span>
-          <ul class="chat-list" id="chatHistoryList">
-            <li class="chat-item" data-id="c-101">
-              <span class="chat-emoji">💬</span>
-              <span class="chat-title">오늘 하루의 긍정 에너지 충전 ✨</span>
-              <div class="item-actions">
-                <button class="btn-item-act" data-action="fav" title="즐겨찾기">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02
-                                     12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                  </svg>
-                </button>
-                <button class="btn-item-act" data-action="delete" title="삭제">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-                  </svg>
-                </button>
-              </div>
-            </li>
-            <li class="chat-item" data-id="c-102">
-              <span class="chat-emoji">🌿</span>
-              <span class="chat-title">작은 성취를 축하하는 시간</span>
-              <div class="item-actions">
-                <button class="btn-item-act" data-action="fav" title="즐겨찾기">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02
-                                     12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                  </svg>
-                </button>
-                <button class="btn-item-act" data-action="delete" title="삭제">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-                  </svg>
-                </button>
-              </div>
-            </li>
-          </ul>
-        </div>
-        <div class="time-group">
-          <span class="time-label">지난 7일</span>
-          <ul class="chat-list">
-            <li class="chat-item" data-id="c-103">
-              <span class="chat-emoji">☕</span>
-              <span class="chat-title">퇴근길 마음 편안해지는 대화</span>
-              <div class="item-actions">
-                <button class="btn-item-act" data-action="delete" title="삭제">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-                  </svg>
-                </button>
-              </div>
-            </li>
-          </ul>
+          <ul class="chat-list" id="chatHistoryList"></ul>
         </div>
       </div>
     </div>
