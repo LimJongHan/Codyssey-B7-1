@@ -30,3 +30,9 @@ class AuthTestCase(unittest.TestCase):
         assert table in {"users", "sessions"}
         with connect() as db:
             return db.execute(f"SELECT count(*) FROM {table}").fetchone()[0]
+
+    def login(self, username="alice", password="example-password", client=None):
+        client = client if client is not None else self.client
+        response = client.post("/api/auth/login", json={"username": username, "password": password})
+        self.assertEqual(response.status_code, 200, response.text)
+        return response
