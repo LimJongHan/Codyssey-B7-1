@@ -178,26 +178,15 @@
 
     <form class="auth-form" id="authForm" novalidate>
 
-      <div class="field-group" id="nameField" style="display:none;">
-        <label class="field-label" for="userName">닉네임</label>
+      <div class="field-group">
+        <label class="field-label" for="userId">아이디</label>
         <div class="field-wrap">
           <span class="field-icon">🌱</span>
-          <input class="field-input" type="text" id="userName" name="name"
-                 placeholder="어떻게 불러드릴까요?" autocomplete="nickname"
-                 maxlength="20">
+          <input class="field-input" type="text" id="userId" name="username"
+                 placeholder="영문·숫자·밑줄 3~30자" autocomplete="username"
+                 autocapitalize="off" spellcheck="false" maxlength="30">
         </div>
-        <span class="field-error" id="nameError"></span>
-      </div>
-
-      <div class="field-group">
-        <label class="field-label" for="userEmail">이메일 주소</label>
-        <div class="field-wrap">
-          <span class="field-icon">✉️</span>
-          <input class="field-input" type="email" id="userEmail" name="email"
-                 placeholder="name@example.com" autocomplete="email"
-                 maxlength="100">
-        </div>
-        <span class="field-error" id="emailError"></span>
+        <span class="field-error" id="idError"></span>
       </div>
 
       <div class="field-group">

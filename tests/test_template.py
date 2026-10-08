@@ -43,6 +43,17 @@ class TemplateTests(unittest.TestCase):
             with self.subTest(path=path, method=method):
                 self.assertEqual(self.client.request(method, path, json=body).status_code, 401)
 
+    def test_only_public_api_skips_login(self):
+        # 새 API가 인증 없이 성공하는 가짜 응답이 되지 않도록 공개 API만 명시적으로 허용한다.
+        public = {"/api/health", "/api/auth/signup", "/api/auth/login", "/api/auth/logout"}
+        for path, operations in app.openapi()["paths"].items():
+            if not path.startswith("/api/") or path in public:
+                continue
+            for method in operations:
+                with self.subTest(path=path, method=method):
+                    url = path.replace("{room_id}", "1")
+                    self.assertEqual(self.client.request(method, url, json={}).status_code, 401)
+
     def test_input_validation_and_unimplemented_state(self):
         app.dependency_overrides[get_current_user] = lambda: User(id=1, username="test")
         for question in ("", "  ", "a" * 2001):
