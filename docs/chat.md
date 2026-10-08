@@ -166,4 +166,4 @@ sqlite3 .data/positive-bot.db "SELECT name, tbl_name FROM sqlite_master WHERE ty
 - 인증 테스트: `tests/test_auth_access.py`의 채팅 `501` 기대값은 인증 담당이 갱신한다.
 - 화면: 현재 화면 코드는 루트의 Flask 앱(`app.py`)이며 `/api/chat`을 호출한다. FastAPI 채팅 API(`/api/rooms/...`)에 연결해야 한다.
 - README: 방 생성·목록·내역 조회·JSON 전송을 미구현으로 적은 문구와 채팅 API 예시를 갱신한다.
-- 배포: 영구 DB는 아직 미정이다. `app/db.py`와 인증·채팅 SQL을 인증 담당과 함께 맞춘다.
+- 배포: AWS EC2 서버의 로컬 SQLite 파일(`DATABASE_PATH`)을 사용한다. 서버에 `VERCEL`을 설정하면 `app/db.py`가 DB 접근을 막으므로 설정하지 않는다. README의 Vercel 배포 설명은 통합 시 갱신한다.
