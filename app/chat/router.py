@@ -1,3 +1,5 @@
+import logging
+import sqlite3
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -5,15 +7,27 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.auth.dependencies import get_current_user
 from app.auth.schemas import User
 from app.chat.schemas import ChatRequest, Exchange, Room, RoomCreate
+from app.db import connect
 
 router = APIRouter(prefix="/api/rooms", tags=["chat"])
 CurrentUser = Annotated[User, Depends(get_current_user)]
+logger = logging.getLogger(__name__)
 
 
 @router.post("", response_model=Room, status_code=201)
 def create_room(body: RoomCreate, user: CurrentUser):
-    # TODO: user.id로 소유자를 저장한다. 요청 본문에서 user_id를 받지 않는다.
-    raise HTTPException(status_code=501, detail="채팅방 생성 구현 예정입니다.")
+    # 소유자는 인증된 user.id로만 정한다. 요청 본문에서 user_id를 받지 않는다.
+    try:
+        with connect() as db:
+            room = db.execute(
+                "INSERT INTO rooms (user_id, title) VALUES (?, ?) RETURNING id, title, created_at",
+                (user.id, body.title),
+            ).fetchone()
+    except sqlite3.Error:
+        logger.exception("db_save_failure user_id=%s", user.id)
+        raise HTTPException(status_code=500, detail="채팅방을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.")
+    logger.info("db_save_success user_id=%s room_id=%s", user.id, room["id"])
+    return dict(room)
 
 
 @router.get("", response_model=list[Room])
