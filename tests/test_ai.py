@@ -85,6 +85,26 @@ class AITests(unittest.IsolatedAsyncioTestCase):
                     await generate_reply(self.messages)
                 self.assertEqual(error.exception.status_code, 502)
 
+    async def test_missing_choices_or_content_is_rejected(self):
+        responses = [
+            {"choices": []},
+            {"choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": None}}]},
+        ]
+        for body in responses:
+            with self.subTest(body=body):
+                self.mock_api(lambda request: httpx2.Response(200, json=body))
+                with self.assertRaises(AIError) as error:
+                    await generate_reply(self.messages)
+                self.assertEqual(error.exception.status_code, 502)
+
+    async def test_blank_model_uses_codyssey_default(self):
+        def handler(request):
+            self.assertEqual(json.loads(request.content)["model"], "gpt-5-mini")
+            return self.response()
+        self.mock_api(handler)
+        with patch.dict(os.environ, {"AI_MODEL": ""}):
+            self.assertIn("면접", await generate_reply(self.messages))
+
     async def test_invalid_configuration_does_not_call_api(self):
         for settings in [{"AI_API_KEY": ""}, {"AI_TIMEOUT_SECONDS": "bad"},
                          {"AI_TIMEOUT_SECONDS": "0"}, {"AI_TIMEOUT_SECONDS": "nan"}]:
