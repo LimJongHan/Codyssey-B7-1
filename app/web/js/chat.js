@@ -13,6 +13,7 @@
   const DANGER_CHARS   = 1950; // 위험 표시
   const GUEST_LIMIT    = 5;    // 게스트 최대 대화 횟수
   const RETRY_DELAY    = 1200; // 재시도 최소 간격(ms)
+  const SEND_TIMEOUT   = 40_000; // 서버 AI 제한 시간(30초)보다 길게 두어 서버의 504 안내를 먼저 받는다
 
   /* ==========================================================================
      DOM 참조
@@ -419,46 +420,35 @@
       let roomId = sessionStorage.getItem('happi_active_room_id') || '1';
 
       // 2. 팀 백엔드 규격: POST /api/rooms/{room_id}/messages with {"question": text}
-      // 또는 폴백 호환: POST /api/chat with {"message": text}
-      let res;
-      try {
-        res = await fetch(`/api/rooms/${roomId}/messages`, {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body:    JSON.stringify({ question: text }),
-          credentials: 'same-origin',
-          signal:  AbortSignal.timeout(30_000),
-        });
+      // 네트워크 오류·시간 초과는 아래 catch에서 오류로 안내한다. 대체 답변을 만들지 않는다.
+      let res = await fetch(`/api/rooms/${roomId}/messages`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body:    JSON.stringify({ question: text }),
+        credentials: 'same-origin',
+        signal:  AbortSignal.timeout(SEND_TIMEOUT),
+      });
 
-        // 만약 404(방 없음)이면 새 방 생성 시도 후 재전송
-        if (res.status === 404) {
-          const createRoomRes = await fetch('/api/rooms', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({ title: '오늘의 대화' }),
-            credentials: 'same-origin'
-          });
-          if (createRoomRes.ok) {
-            const newRoom = await createRoomRes.json();
-            roomId = String(newRoom.id);
-            sessionStorage.setItem('happi_active_room_id', roomId);
-            res = await fetch(`/api/rooms/${roomId}/messages`, {
-              method:  'POST',
-              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-              body:    JSON.stringify({ question: text }),
-              credentials: 'same-origin',
-              signal:  AbortSignal.timeout(30_000),
-            });
-          }
-        }
-      } catch (networkErr) {
-        // 백엔드 엔드포인트 실패 시 /api/chat으로 안전 폴백
-        res = await fetch('/api/chat', {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ message: text }),
-          signal:  AbortSignal.timeout(30_000),
+      // 만약 404(방 없음)이면 새 방 생성 시도 후 재전송
+      if (res.status === 404) {
+        const createRoomRes = await fetch('/api/rooms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ title: '오늘의 대화' }),
+          credentials: 'same-origin'
         });
+        if (createRoomRes.ok) {
+          const newRoom = await createRoomRes.json();
+          roomId = String(newRoom.id);
+          sessionStorage.setItem('happi_active_room_id', roomId);
+          res = await fetch(`/api/rooms/${roomId}/messages`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body:    JSON.stringify({ question: text }),
+            credentials: 'same-origin',
+            signal:  AbortSignal.timeout(SEND_TIMEOUT),
+          });
+        }
       }
 
       if (!res.ok) {
@@ -481,11 +471,9 @@
         return;
       }
 
-      const data = await res.json();
-      // 팀 규격 Exchange의 answer 또는 호환 reply 수신
-      const reply = data?.answer || data?.reply
-        || '오늘 하루도 정말 고생 많으셨어요. 당신의 곁에서 항상 응원할게요! ☀️';
-      appendMsg(reply, 'bot');
+      // 팀 규격 Exchange의 answer만 표시한다. 고정 문구로 AI 답변을 대신하지 않는다.
+      const exchange = await res.json();
+      appendMsg(exchange.answer, 'bot');
 
     } catch (err) {
       if (err.name === 'TimeoutError' || err.name === 'AbortError') {
