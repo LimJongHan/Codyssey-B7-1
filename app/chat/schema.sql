@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS rooms (
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
+CREATE INDEX IF NOT EXISTS idx_rooms_user ON rooms(user_id);
+
 CREATE TABLE IF NOT EXISTS exchanges (
     id INTEGER PRIMARY KEY,
     room_id INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
@@ -12,3 +14,5 @@ CREATE TABLE IF NOT EXISTS exchanges (
     answer TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
+
+CREATE INDEX IF NOT EXISTS idx_exchanges_room ON exchanges(room_id);

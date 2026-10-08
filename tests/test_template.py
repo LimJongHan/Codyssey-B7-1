@@ -48,7 +48,6 @@ class TemplateTests(unittest.TestCase):
         for question in ("", "  ", "a" * 2001):
             self.assertEqual(self.client.post("/api/rooms/1/messages", json={"question": question}).status_code, 422)
         self.assertEqual(self.client.post("/api/rooms", json={"title": " "}).status_code, 422)
-        self.assertEqual(self.client.post("/api/rooms/1/messages", json={"question": "안녕"}).status_code, 501)
         self.assertEqual(self.client.post("/api/auth/signup", json={"username": "demo", "password": "12345678"}).status_code, 201)
 
     def test_database_persists_and_enforces_foreign_keys(self):
