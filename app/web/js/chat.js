@@ -66,7 +66,11 @@
 
     const el = document.createElement('div');
     el.className = `toast toast--${type}`;
-    el.innerHTML = `<span>${icons[type] ?? '💬'}</span><span>${msg}</span>`;
+    const icon = document.createElement('span');
+    const body = document.createElement('span');
+    icon.textContent = icons[type] ?? '💬';
+    body.textContent = msg; // 메시지는 HTML로 해석하지 않는다
+    el.append(icon, body);
     toastContainer.appendChild(el);
 
     setTimeout(() => {
@@ -314,12 +318,6 @@
     return `오${h < 12 ? '전' : '후'} ${h % 12 || 12}:${m}`;
   };
 
-  const escHtml = s => s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/\n/g, '<br>');
-
   /* 봇 아바타 인라인 SVG (컴포넌트 의존 없이 재사용) */
   const botAvatarSVG = `
     <div class="happi happi--sm happi--cheerful" role="img" aria-label="해피">
@@ -372,29 +370,32 @@
         </div>`;
       row.querySelector('.msg-bubble').textContent = text;
     } else if (role === 'error') {
-      const retryData = extra.retryText ? `data-retry="${escHtml(extra.retryText)}"` : '';
       row.innerHTML = `
         <div class="msg-av">${botAvatarSVG}</div>
         <div class="msg-col">
           <div class="msg-bubble">
             <span class="err-txt"></span>
-            ${retryData ? `<button class="btn-retry" ${retryData}>다시 시도</button>` : ''}
           </div>
         </div>`;
       row.querySelector('.err-txt').textContent = `⚠️ ${text}`;
 
-      // 재시도 버튼 이벤트
-      const retryBtn = row.querySelector('.btn-retry');
-      retryBtn?.addEventListener('click', () => {
-        const now = Date.now();
-        if (now - lastRetryTime < RETRY_DELAY) {
-          showToast('잠시 후 다시 시도해 주세요.', 'warn', 2000);
-          return;
-        }
-        lastRetryTime = now;
-        row.remove();
-        sendMessage(retryBtn.dataset.retry);
-      });
+      // 재시도 버튼: 질문 원문은 HTML 속성에 넣지 않고 클릭 핸들러에서 그대로 사용한다
+      if (extra.retryText) {
+        const retryBtn = document.createElement('button');
+        retryBtn.className = 'btn-retry';
+        retryBtn.textContent = '다시 시도';
+        row.querySelector('.msg-bubble').append(retryBtn);
+        retryBtn.addEventListener('click', () => {
+          const now = Date.now();
+          if (now - lastRetryTime < RETRY_DELAY) {
+            showToast('잠시 후 다시 시도해 주세요.', 'warn', 2000);
+            return;
+          }
+          lastRetryTime = now;
+          row.remove();
+          sendMessage(extra.retryText);
+        });
+      }
     } else {
       // user
       row.innerHTML = `

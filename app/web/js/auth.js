@@ -38,7 +38,11 @@
     const icons = { error:'⚠️', success:'✅', warn:'💛', info:'☀️' };
     const el = document.createElement('div');
     el.className = `toast toast--${type}`;
-    el.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
+    const icon = document.createElement('span');
+    const body = document.createElement('span');
+    icon.textContent = icons[type];
+    body.textContent = msg; // 서버 detail도 들어오므로 HTML로 해석하지 않는다
+    el.append(icon, body);
     toastCont.appendChild(el);
     setTimeout(() => {
       el.style.animation = 'toast-out 0.3s ease forwards';
