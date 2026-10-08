@@ -39,6 +39,7 @@ async def generate_reply(messages: list[Message]) -> str:
         logger.error("ai_call_failure reason=configuration")
         raise AIError("AI 서비스 설정을 확인해 주세요.", 503) from None
 
+    logger.info("ai_call_start")
     try:
         async with AsyncOpenAI(api_key=api_key, timeout=timeout, max_retries=0) as client:
             response = await client.responses.create(
@@ -50,11 +51,15 @@ async def generate_reply(messages: list[Message]) -> str:
                 store=False,
             )
     except APITimeoutError:
+        logger.warning("ai_call_failure reason=timeout")
         raise AIError("응답이 지연되고 있어요. 잠시 후 다시 시도해 주세요.", 504) from None
     except APIError as error:
+        logger.warning("ai_call_failure reason=%s", type(error).__name__)
         raise AIError("지금은 답변을 받을 수 없어요. 잠시 후 다시 시도해 주세요.") from None
 
     answer = response.output_text.strip()
     if response.status != "completed" or not answer:
+        logger.warning("ai_call_failure reason=invalid_response")
         raise AIError("답변을 완성하지 못했어요. 다시 시도해 주세요.")
+    logger.info("ai_call_success")
     return answer
