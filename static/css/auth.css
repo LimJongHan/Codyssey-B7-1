@@ -1,0 +1,391 @@
+/* ==========================================================================
+   Page 1. 온보딩 및 로그인/회원가입 스타일 (auth.css)
+   토스 감성 미니멀 카드 + SoriAI 풍의 따뜻한 웰컴 패널
+   ========================================================================== */
+
+.page-auth-body {
+  background-color: #F7F8FA;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-viewport {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+}
+
+.auth-container {
+  width: 100%;
+  max-width: 1020px;
+  min-height: 640px;
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+/* ==========================================================================
+   1. 좌측 웰컴 패널 (SoriAI 레퍼런스 스타일)
+   ========================================================================== */
+.auth-welcome-panel {
+  flex: 1.1;
+  background: linear-gradient(145deg, #FFF9ED 0%, #FFF3E0 50%, #FFE0B2 100%);
+  padding: 48px 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  border-right: 1px solid rgba(255, 179, 0, 0.15);
+}
+
+/* 앰비언트 백그라운드 블러 오브젝트 */
+.auth-welcome-panel::before {
+  content: '';
+  position: absolute;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 152, 0, 0.2) 0%, transparent 70%);
+  top: -60px;
+  right: -60px;
+  pointer-events: none;
+}
+
+.welcome-top-tag {
+  position: relative;
+  z-index: 2;
+}
+
+.welcome-character-center {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin: 24px 0;
+}
+
+.character-showcase {
+  margin-bottom: 24px;
+  filter: drop-shadow(0 14px 28px rgba(255, 143, 0, 0.22));
+}
+
+.welcome-speech-bubble {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 20px 24px;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 25px rgba(255, 152, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  max-width: 380px;
+}
+
+.bubble-greeting {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
+}
+
+.bubble-greeting strong {
+  color: var(--primary);
+}
+
+.bubble-subtext {
+  font-size: 13.5px;
+  color: var(--text-sub);
+  line-height: 1.55;
+  font-weight: 500;
+}
+
+.welcome-feature-cards {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feature-mini-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 10px 16px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.pill-icon {
+  font-size: 14px;
+}
+
+/* ==========================================================================
+   2. 우측 인증 폼 카드 (토스 감성 미니멀리즘)
+   ========================================================================== */
+.auth-form-panel {
+  flex: 1;
+  padding: 48px 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--bg-card);
+}
+
+.auth-card-box {
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+.auth-card-header {
+  margin-bottom: 24px;
+}
+
+.auth-main-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.03em;
+  margin-bottom: 6px;
+}
+
+.auth-sub-desc {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* 토스 스타일 세그먼트 슬라이딩 탭 스위처 */
+.auth-tab-segment {
+  position: relative;
+  display: flex;
+  background: var(--bg-subtle);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  margin-bottom: 28px;
+}
+
+.tab-segment-btn {
+  flex: 1;
+  position: relative;
+  z-index: 2;
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+  border-radius: var(--radius-sm);
+  transition: color 0.2s ease;
+}
+
+.tab-segment-btn.active {
+  color: var(--text-primary);
+}
+
+.tab-slider-pill {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  height: calc(100% - 8px);
+  background: var(--bg-card);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.28s var(--ease-spring);
+  z-index: 1;
+}
+
+.auth-tab-segment.register-active .tab-slider-pill {
+  transform: translateX(100%);
+}
+
+/* 폼 요소 스타일 */
+.auth-interactive-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.form-input {
+  width: 100%;
+  height: 50px;
+  padding: 0 16px 0 44px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background-color: #FAFAFB;
+}
+
+.form-input:focus {
+  background-color: var(--bg-card);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.input-icon {
+  position: absolute;
+  left: 14px;
+  font-size: 16px;
+  pointer-events: none;
+}
+
+.btn-toggle-pw {
+  position: absolute;
+  right: 12px;
+  color: var(--text-disabled);
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.btn-toggle-pw:hover {
+  color: var(--text-secondary);
+}
+
+/* Toss Bold Primary Submit Button */
+.btn-auth-submit {
+  margin-top: 8px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  background: var(--grad-primary);
+  color: #FFFFFF;
+  font-size: 15.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: var(--shadow-primary);
+}
+
+.btn-auth-submit:hover {
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+}
+
+.btn-auth-submit:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* 구분선 */
+.auth-divider {
+  position: relative;
+  text-align: center;
+  margin: 24px 0 16px;
+}
+
+.auth-divider::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: 1px;
+  background-color: var(--border-light);
+}
+
+.auth-divider span {
+  position: relative;
+  background-color: var(--bg-card);
+  padding: 0 12px;
+  font-size: 12.5px;
+  color: var(--text-disabled);
+  font-weight: 500;
+}
+
+/* 게스트 모드 진입 링크 버튼 */
+.guest-explore-area {
+  text-align: center;
+}
+
+.btn-guest-explore {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 700;
+  transition: all var(--transition-fast);
+}
+
+.btn-guest-explore:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.guest-note {
+  margin-top: 10px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* ==========================================================================
+   반응형 브레이크포인트
+   ========================================================================== */
+@media (max-width: 900px) {
+  .auth-container {
+    flex-direction: column;
+    max-width: 480px;
+  }
+  .auth-welcome-panel {
+    padding: 32px 24px;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 179, 0, 0.15);
+  }
+  .welcome-character-center {
+    margin: 16px 0;
+  }
+  .happi-size-lg {
+    width: 120px;
+    height: 120px;
+  }
+  .welcome-feature-cards {
+    display: none;
+  }
+  .auth-form-panel {
+    padding: 36px 24px;
+  }
+}
