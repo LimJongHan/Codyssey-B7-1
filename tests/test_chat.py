@@ -73,3 +73,24 @@ class CreateRoomTests(ChatTestCase):
         self.assertIn("db_save_failure user_id=999", "\n".join(logs.output))
         with connect() as db:
             self.assertEqual(db.execute("SELECT count(*) FROM rooms").fetchone()[0], 0)
+
+
+class ListRoomsTests(ChatTestCase):
+    def create_room(self, title):
+        return self.client.post("/api/rooms", json={"title": title}).json()
+
+    def test_empty_when_no_rooms(self):
+        response = self.client.get("/api/rooms")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), [])
+
+    def test_lists_only_own_rooms_newest_first(self):
+        first = self.create_room("첫째")
+        second = self.create_room("둘째")
+        bob = self.add_user("bob")
+        self.login(bob)
+        bobs = self.create_room("밥의 방")
+
+        self.assertEqual(self.client.get("/api/rooms").json(), [bobs])
+        self.login(self.alice)
+        self.assertEqual(self.client.get("/api/rooms").json(), [second, first])

@@ -32,8 +32,13 @@ def create_room(body: RoomCreate, user: CurrentUser):
 
 @router.get("", response_model=list[Room])
 def list_rooms(user: CurrentUser):
-    # TODO: 로그인한 사용자의 방만 최신순으로 반환한다.
-    raise HTTPException(status_code=501, detail="채팅방 목록 구현 예정입니다.")
+    # 로그인한 사용자의 방만 최신순으로 반환한다. created_at은 같은 값이 있을 수 있어 id로 정렬한다.
+    with connect() as db:
+        rooms = db.execute(
+            "SELECT id, title, created_at FROM rooms WHERE user_id = ? ORDER BY id DESC",
+            (user.id,),
+        ).fetchall()
+    return [dict(room) for room in rooms]
 
 
 @router.get("/{room_id}/messages", response_model=list[Exchange])
