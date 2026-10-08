@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block title %}해피(Happi) - 긍정 대화방{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+{% endblock %}
+
+{% block body_class %}page-chat-body{% endblock %}
+
+{% block content %}
+<div class="chat-app-layout" id="chatAppLayout">
+  
+  <!-- ====================================================================
+       1. 왼쪽 사이드바 (즐겨찾기 + 대화 아카이브 보관함)
+       ==================================================================== -->
+  {% include 'components/sidebar.html' %}
+
+  <!-- ====================================================================
+       2. 메인 대화 영역 (헤더 + 채팅 스크롤 영역 + 인풋 바)
+       ==================================================================== -->
+  <main class="chat-main-viewport">
+    
+    <!-- 2-1. 상단 헤더 -->
+    {% include 'components/header.html' %}
+
+    <!-- 2-2. 대화 메시지 컨테이너 -->
+    <div class="chat-messages-container" id="chatMessagesContainer">
+      <div class="messages-inner-wrapper" id="messagesInner">
+
+        <!-- 웰컴 배너 & 긍정 추천 토픽 (대화 시작 시 안내) -->
+        <div class="chat-welcome-banner" id="chatWelcomeBanner">
+          <div class="welcome-banner-mascot">
+            {% with size='md', mood='cheerful' %}
+              {% include 'components/character.html' %}
+            {% endwith %}
+          </div>
+          <h2 class="welcome-banner-title">안녕하세요! 저는 긍정 메이트 <span class="highlight-name">해피</span>예요 ☀️</h2>
+          <p class="welcome-banner-desc">
+            오늘 있었던 사소한 일이나 마음속 고민, 무엇이든 편하게 이야기해 주세요.<br>
+            언제나 온 마음을 다해 당신의 편이 되어드릴게요.
+          </p>
+
+          <!-- 퀵 프롬프트 칩 (Quick Prompt Chips) -->
+          <div class="quick-prompts-grid">
+            <button type="button" class="quick-chip-btn" data-prompt="오늘 하루 정말 열심히 살았는데 스스로 칭찬하고 싶어. 같이 칭찬해줄래?">
+              <span class="chip-emoji">👏</span>
+              <span class="chip-text">오늘 하루 수고한 나 칭찬하기</span>
+            </button>
+            <button type="button" class="quick-chip-btn" data-prompt="요즘 사소한 일에도 불안하고 지치는데, 따뜻한 위로의 말 한마디 들려줘.">
+              <span class="chip-emoji">🌿</span>
+              <span class="chip-text">지친 마음에 따뜻한 위로 받기</span>
+            </button>
+            <button type="button" class="quick-chip-btn" data-prompt="내일 더 씩씩하게 일어날 수 있는 힘이 나는 긍정 확언 3가지 알려줘!">
+              <span class="chip-emoji">✨</span>
+              <span class="chip-text">내일을 위한 긍정 확언 3가지</span>
+            </button>
+            <button type="button" class="quick-chip-btn" data-prompt="실수를 해서 자책하고 있어. 어떻게 마음을 다잡아야 할까?">
+              <span class="chip-emoji">☀️</span>
+              <span class="chip-text">실수 후 자책감 훌훌 털어내기</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 실제 대화 말풍선 리스트 -->
+        <div class="message-feed" id="messageFeed">
+          
+          <!-- 해피의 기본 첫 인사 메시지 -->
+          <div class="msg-row msg-bot">
+            <div class="msg-avatar-col">
+              {% with size='sm', mood='cheerful' %}
+                {% include 'components/character.html' %}
+              {% endwith %}
+            </div>
+            <div class="msg-content-col">
+              <div class="msg-sender-name">해피</div>
+              <div class="msg-bubble-card">
+                오늘 하루도 정말 고생 많으셨어요! 🌿<br>
+                당신이 있는 그대로 소중하다는 사실을 기억해 주세요. 지금 기분이나 마음 상태는 어떤가요? 편하게 털어놓아 보세요!
+              </div>
+              <span class="msg-time-stamp">오후 3:45</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 봇 타이핑 인디케이터 (메시지 생성 중일 때) -->
+        <div class="typing-indicator-row" id="typingIndicator" style="display: none;">
+          <div class="typing-avatar">
+            {% with size='sm', mood='listening' %}
+              {% include 'components/character.html' %}
+            {% endwith %}
+          </div>
+          <div class="typing-bubble">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 2-3. 하단 메시지 입력창 바 (Floating Capsule Input) -->
+    <div class="chat-input-dock">
+      <div class="input-dock-inner">
+        <form id="chatForm" class="chat-input-form">
+          <div class="input-control-box">
+            <!-- 텍스트 영역 (자동 확장) -->
+            <textarea 
+              id="messageInput" 
+              class="chat-textarea" 
+              placeholder="해피에게 편하게 긍정의 이야기를 털어놓아 보세요..." 
+              rows="1"
+              maxlength="2000"
+            ></textarea>
+            
+            <div class="input-actions-bar">
+              <!-- 기분 이모지 퀵 피커 -->
+              <div class="emotion-tags-row">
+                <button type="button" class="btn-emotion-tag" data-emotion="😊" title="기쁨">😊 기쁨</button>
+                <button type="button" class="btn-emotion-tag" data-emotion="😔" title="지침">😔 지침</button>
+                <button type="button" class="btn-emotion-tag" data-emotion="🌱" title="희망">🌱 희망</button>
+              </div>
+
+              <!-- 전송 버튼 -->
+              <button type="submit" class="btn-send-message" id="sendBtn" disabled title="메시지 전송">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m22 2-7 20-4-9-9-4Z" />
+                  <path d="M22 2 11 13" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <p class="chat-disclaimer">
+          해피는 당신에게 긍정적인 생각과 위로를 건네는 인공지능 메이트입니다.
+        </p>
+      </div>
+    </div>
+
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+{% endblock %}
