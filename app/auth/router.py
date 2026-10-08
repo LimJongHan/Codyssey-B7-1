@@ -4,11 +4,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
-from app.auth.cookies import COOKIE_NAME, set_session_cookie
+from app.auth.cookies import COOKIE_NAME, clear_session_cookie, set_session_cookie
 from app.auth.dependencies import get_current_user
 from app.auth.passwords import hash_password, verify_password
 from app.auth.schemas import Credentials, User
-from app.auth.sessions import create_session
+from app.auth.sessions import create_session, revoke_session
 from app.db import connect
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -48,9 +48,9 @@ def login(body: Credentials, request: Request, response: Response):
 
 
 @router.post("/logout", status_code=204)
-def logout(response: Response):
-    # TODO: DB 세션 삭제 및 쿠키 제거. 이미 로그아웃 상태여도 204.
-    raise HTTPException(status_code=501, detail="로그아웃 구현 예정입니다.")
+def logout(request: Request, response: Response):
+    revoke_session(request.cookies.get(COOKIE_NAME))
+    clear_session_cookie(response, request)
 
 
 @router.get("/me", response_model=User)
