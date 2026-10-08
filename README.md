@@ -4,6 +4,8 @@
 
 현재는 **4인 개발용 초기 템플릿**이다. FastAPI 실행, 시작 화면, API 계약, 입력 검증, 로컬 SQLite 초기화가 준비되어 있다. 회원가입·로그인·채팅 저장·실제 AI 호출은 담당자가 구현해야 한다. 미구현 API는 `501`, 인증이 필요한 API는 `401`을 반환한다.
 
+인증 내부의 비밀번호 해시·검증은 `argon2-cffi`의 Argon2id로 구현되어 있다. 공통 의존성 변경은 이 패키지와 잠금 파일에 한정하며 통합 시 함께 반영한다.
+
 ## 실행
 
 Python 3.12와 [uv](https://docs.astral.sh/uv/getting-started/installation/)를 사용한다.
