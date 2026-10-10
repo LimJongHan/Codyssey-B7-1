@@ -143,8 +143,8 @@
       if (show) showFieldError(userPw, pwErr, '비밀번호는 8자 이상이어야 합니다.');
       return false;
     }
-    if (val.length > 72) {
-      if (show) showFieldError(userPw, pwErr, '비밀번호는 72자 이내로 입력해 주세요.');
+    if (val.length > 128) { // 서버 Credentials.password 최대 길이와 같다
+      if (show) showFieldError(userPw, pwErr, '비밀번호는 128자 이내로 입력해 주세요.');
       return false;
     }
     clearFieldError(userPw, pwErr);

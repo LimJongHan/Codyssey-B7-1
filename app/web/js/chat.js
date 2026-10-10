@@ -33,6 +33,7 @@ import { APIError, responseError, readChatStream } from './api.js';
   const typingRow       = document.getElementById('typingRow');
   const chatForm        = document.getElementById('chatForm');
   const msgInput        = document.getElementById('msgInput');
+  const inputPlaceholder = msgInput?.placeholder ?? '';
   const btnSend         = document.getElementById('btnSend');
   const charCounter     = document.getElementById('charCounter');
   const inputError      = document.getElementById('inputError');
@@ -275,7 +276,7 @@ import { APIError, responseError, readChatStream } from './api.js';
     clearInputError();
 
     // 빈 입력 검사
-    btnSend.disabled = trimmed.length === 0 || isSending || isLoggingOut || isLoadingRoom || !navigator.onLine;
+    btnSend.disabled = trimmed.length === 0 || !isLoggedIn || isSending || isLoggingOut || isLoadingRoom || !navigator.onLine;
   }
 
   function showInputError (msg) {
@@ -435,7 +436,7 @@ import { APIError, responseError, readChatStream } from './api.js';
     if (typingRow)    typingRow.style.display    = on ? 'flex' : 'none';
     if (btnSend)      btnSend.classList.toggle('is-loading', on);
     if (chatForm)     chatForm.classList.toggle('is-disabled', on);
-    if (msgInput)     msgInput.disabled = on;
+    if (msgInput)     msgInput.disabled = on || !isLoggedIn; // 비로그인은 전송이 끝나도 입력을 열지 않는다
     if (btnLogout)    btnLogout.disabled = on;
     syncSendButton();
 
@@ -539,6 +540,12 @@ import { APIError, responseError, readChatStream } from './api.js';
   chatForm?.addEventListener('submit', (e) => {
     e.preventDefault();
 
+    // 0) 비로그인: 질문은 로그인한 사용자만 보낼 수 있다
+    if (!isLoggedIn) {
+      showToast('로그인 후 대화할 수 있어요.', 'warn');
+      return;
+    }
+
     // ── 검증 게이트 ──
     const raw  = msgInput?.value ?? '';
     const text = raw.trim();
@@ -580,7 +587,13 @@ import { APIError, responseError, readChatStream } from './api.js';
     if (guestCard) guestCard.hidden = isLoggedIn;
     if (headerAuthArea) headerAuthArea.hidden = isLoggedIn;
     if (btnLogout) btnLogout.hidden = !isLoggedIn;
-    guestLimitBanner?.classList.remove('is-visible');
+    // 비로그인은 둘러보기만 허용한다: 입력을 막고 로그인 안내를 보여준다
+    if (msgInput) {
+      msgInput.disabled = !isLoggedIn || isSending;
+      msgInput.placeholder = isLoggedIn ? inputPlaceholder : '로그인 후 대화할 수 있어요.';
+    }
+    guestLimitBanner?.classList.toggle('is-visible', !isLoggedIn);
+    syncSendButton();
   }
 
   async function syncAuthState () {
