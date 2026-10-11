@@ -3,10 +3,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.ai.service import AIError
 from app.auth.router import router as auth_router
 from app.chat.router import router as chat_router
 from app.db import init_db
@@ -25,11 +24,6 @@ app = FastAPI(title="긍정봇", lifespan=lifespan)
 app.include_router(auth_router)
 app.include_router(chat_router)
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
-
-
-@app.exception_handler(AIError)
-async def ai_error_handler(request, error: AIError):
-    return JSONResponse(status_code=error.status_code, content={"detail": str(error)})
 
 
 # 웹 페이지

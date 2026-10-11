@@ -41,7 +41,7 @@ class TemplateTests(unittest.TestCase):
             ("GET", "/api/rooms", None),
             ("POST", "/api/rooms", {"title": "대화"}),
             ("GET", "/api/rooms/1/messages", None),
-            ("POST", "/api/rooms/1/messages", {"question": "안녕"}),
+            ("POST", "/api/rooms/1/messages/stream", {"question": "안녕"}),
         ]:
             with self.subTest(path=path, method=method):
                 self.assertEqual(self.client.request(method, path, json=body).status_code, 401)
@@ -57,10 +57,10 @@ class TemplateTests(unittest.TestCase):
                     url = path.replace("{room_id}", "1")
                     self.assertEqual(self.client.request(method, url, json={}).status_code, 401)
 
-    def test_input_validation_and_unimplemented_state(self):
+    def test_input_validation(self):
         app.dependency_overrides[get_current_user] = lambda: User(id=1, username="test")
         for question in ("", "  ", "a" * 2001):
-            self.assertEqual(self.client.post("/api/rooms/1/messages", json={"question": question}).status_code, 422)
+            self.assertEqual(self.client.post("/api/rooms/1/messages/stream", json={"question": question}).status_code, 422)
         self.assertEqual(self.client.post("/api/rooms", json={"title": " "}).status_code, 422)
         self.assertEqual(self.client.post("/api/auth/signup", json={"username": "demo", "password": "12345678"}).status_code, 201)
 

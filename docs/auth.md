@@ -144,7 +144,7 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 ## 검증 결과
 
-2026-10-11, Python 3.12에서 인증·채팅·AI·기반을 포함한 전체 **82개 테스트**를 통과했다. 테스트는 임시 SQLite DB를 사용하며 실제 사용자 데이터를 수정하지 않는다.
+2026-10-11, Python 3.12에서 인증·채팅·AI·기반을 포함한 전체 **76개 테스트**를 통과했다. 테스트는 임시 SQLite DB를 사용하며 실제 사용자 데이터를 수정하지 않는다.
 
 | 파일 | 검증 내용 |
 | --- | --- |
@@ -159,7 +159,7 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 | `tests/test_auth_lifecycle.py` | HTTPS 쿠키, 고정 만료, 새 Python 프로세스에서 세션 유지 |
 | `tests/test_auth_access.py` | 실제 보호 API 인증 연결, 사용자 구분, 로그인 중 가입 |
 
-`TestClient`로 HTTP/HTTPS 쿠키를 검증한다. 인증 연결 테스트는 실제 세션으로 방 생성(`user_id` 위조 무시), 내역 조회, JSON/SSE 전송·저장, 로그아웃 후 접근 차단을 확인한다. AI 응답은 테스트 안에서만 대체한다. 외부 제공자 성공이나 원격 배포 검증을 뜻하지 않는다.
+`TestClient`로 HTTP/HTTPS 쿠키를 검증한다. 인증 연결 테스트는 실제 세션으로 방 생성(`user_id` 위조 무시), 내역 조회, SSE 전송·저장, 로그아웃 후 접근 차단을 확인한다. AI 응답은 테스트 안에서만 대체한다. 외부 제공자 성공이나 원격 배포 검증을 뜻하지 않는다.
 
 별도로 임시 SQLite DB와 실제 Uvicorn 서버를 실행해 로컬 HTTP에서 가입·중복 가입·로그인·현재 사용자 조회·입력 오류·로그아웃·로그아웃 후 접근 차단을 확인했다. 위 API 예시의 JSON 응답과 HttpOnly 쿠키 발급도 함께 확인했다.
 

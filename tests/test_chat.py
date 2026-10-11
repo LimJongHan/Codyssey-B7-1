@@ -2,11 +2,10 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from app.ai.service import AIError
 from app.auth.dependencies import get_current_user
 from app.auth.schemas import User
 from app.db import connect
@@ -136,97 +135,3 @@ class ListMessagesTests(ChatTestCase):
                 self.assertEqual(response.status_code, 404)
                 self.assertEqual(response.json(), {"detail": "채팅방을 찾을 수 없습니다."})
 
-
-class SendMessageTests(ChatTestCase):
-    """AI 연동 전이므로 generate_reply는 테스트 안에서만 대체한다."""
-
-    def setUp(self):
-        super().setUp()
-        self.room = self.create_room()
-
-    def send(self, question, room_id=None):
-        room_id = self.room["id"] if room_id is None else room_id
-        return self.client.post(f"/api/rooms/{room_id}/messages", json={"question": question})
-
-    def saved_count(self):
-        with connect() as db:
-            return db.execute("SELECT count(*) FROM exchanges").fetchone()[0]
-
-    def test_saves_and_returns_exchange(self):
-        with patch("app.chat.router.generate_reply", AsyncMock(return_value="많이 힘든 하루였겠어요.")) as reply, \
-                self.assertLogs("app.chat.router", "INFO") as logs:
-            response = self.send("  오늘 많이 지쳤어  ")
-
-        self.assertEqual(response.status_code, 201)
-        exchange = response.json()
-        self.assertEqual(set(exchange), {"id", "room_id", "question", "answer", "created_at"})
-        self.assertEqual(
-            (exchange["room_id"], exchange["question"], exchange["answer"]),
-            (self.room["id"], "오늘 많이 지쳤어", "많이 힘든 하루였겠어요."),
-        )
-        reply.assert_awaited_once_with([{"role": "user", "content": "오늘 많이 지쳤어"}])
-        self.assertEqual(self.client.get(f"/api/rooms/{self.room['id']}/messages").json(), [exchange])
-        output = "\n".join(logs.output)
-        self.assertIn(f"request_received user_id={self.alice.id} room_id={self.room['id']}", output)
-        self.assertIn(f"db_save_success user_id={self.alice.id} room_id={self.room['id']} exchange_id={exchange['id']}", output)
-
-    def test_sends_recent_ten_exchanges_as_context(self):
-        for number in range(1, 13):
-            self.add_exchange(self.room["id"], f"질문{number}", f"답변{number}")
-        self.add_exchange(self.create_room("다른 방")["id"], "다른 방 질문", "다른 방 답변")
-
-        with patch("app.chat.router.generate_reply", AsyncMock(return_value="답변13")) as reply:
-            self.assertEqual(self.send("질문13").status_code, 201)
-
-        expected = []
-        for number in range(3, 13):
-            expected += [{"role": "user", "content": f"질문{number}"}, {"role": "assistant", "content": f"답변{number}"}]
-        expected.append({"role": "user", "content": "질문13"})
-        reply.assert_awaited_once_with(expected)
-
-    def test_ai_failure_is_reported_and_not_saved(self):
-        for status, detail in ((502, "AI 응답을 받지 못했어요."), (503, "AI 서비스 설정을 확인해 주세요."), (504, "응답이 지연되고 있어요.")):
-            with self.subTest(status=status):
-                with patch("app.chat.router.generate_reply", AsyncMock(side_effect=AIError(detail, status))), \
-                        self.assertLogs("app.chat.router", "WARNING") as logs:
-                    response = self.send("응원해줘")
-                self.assertEqual(response.status_code, status)
-                self.assertEqual(response.json(), {"detail": detail})
-                self.assertIn(
-                    f"chat_ai_failure user_id={self.alice.id} room_id={self.room['id']} status={status}",
-                    "\n".join(logs.output),
-                )
-                self.assertEqual(self.saved_count(), 0)
-
-    def test_db_failure_after_ai_reply(self):
-        async def reply_while_db_breaks(messages):
-            # AI를 기다리는 동안 DB에 문제가 생긴 상황
-            with connect() as db:
-                db.execute("DROP TABLE exchanges")
-            return "답변"
-
-        with patch("app.chat.router.generate_reply", reply_while_db_breaks), \
-                self.assertLogs("app.chat.router", "ERROR") as logs:
-            response = self.send("안녕")
-        self.assertEqual(response.status_code, 500)
-        self.assertEqual(response.json(), {"detail": "대화를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요."})
-        self.assertIn(f"db_save_failure user_id={self.alice.id} room_id={self.room['id']}", "\n".join(logs.output))
-
-    def test_hides_missing_and_other_users_rooms(self):
-        self.login(self.add_user("bob"))
-        bobs_room = self.create_room("밥의 방")
-        self.login(self.alice)
-
-        for room_id in (bobs_room["id"], 999):
-            with self.subTest(room_id=room_id):
-                with patch("app.chat.router.generate_reply", AsyncMock(return_value="답변")) as reply:
-                    response = self.send("남의 방에 질문", room_id=room_id)
-                self.assertEqual(response.status_code, 404)
-                self.assertEqual(response.json(), {"detail": "채팅방을 찾을 수 없습니다."})
-                reply.assert_not_awaited()
-        self.assertEqual(self.saved_count(), 0)
-
-    def test_question_length_limit(self):
-        with patch("app.chat.router.generate_reply", AsyncMock(return_value="답변")):
-            self.assertEqual(self.send("가" * 2000).status_code, 201)
-            self.assertEqual(self.send("가" * 2001).status_code, 422)

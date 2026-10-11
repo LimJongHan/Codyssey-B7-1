@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -14,7 +14,6 @@ class ProtectedEndpointTests(AuthTestCase):
             ("GET", "/api/rooms", None),
             ("POST", "/api/rooms", {"title": "내 이야기", "user_id": 9000}),
             ("GET", "/api/rooms/1/messages", None),
-            ("POST", "/api/rooms/1/messages", {"question": "안녕", "user_id": 9000}),
             ("POST", "/api/rooms/1/messages/stream", {"question": "안녕"}),
         ):
             with self.subTest(method=method, path=path, expected=status):
@@ -32,15 +31,13 @@ class ProtectedEndpointTests(AuthTestCase):
         room = response.json()
         path = f"/api/rooms/{room['id']}/messages"
         self.assertEqual(self.client.get(path).json(), [])
-        with patch("app.chat.router.generate_reply", AsyncMock(return_value="응원합니다.")):
-            self.assertEqual(self.client.post(path, json={"question": "안녕"}).status_code, 201)
         async def stream(messages):
             yield "힘내세요."
         with patch("app.chat.router.stream_reply", stream):
             response = self.client.post(path + "/stream", json={"question": "다시 안녕"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("event: done", response.text)
-        self.assertEqual(len(self.client.get(path).json()), 2)
+        self.assertEqual(len(self.client.get(path).json()), 1)
         with connect() as db:
             self.assertEqual(db.execute("SELECT user_id FROM rooms WHERE id=?", (room["id"],)).fetchone()[0],
                              self.client.get("/api/auth/me").json()["id"])

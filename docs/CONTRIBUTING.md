@@ -19,7 +19,7 @@
 
 ## 채팅 → AI
 
-일반 응답은 `await app.ai.service.generate_reply(messages) -> str`, 스트리밍은 `app.ai.service.stream_reply(messages)`의 async iterator를 사용한다. AI 담당은 DB·사용자·방을 직접 조회하지 않는다. HTTP용 AI 단독 엔드포인트도 추가하지 않는다.
+응답은 `app.ai.service.stream_reply(messages)`의 async iterator를 사용한다. AI 담당은 DB·사용자·방을 직접 조회하지 않는다. HTTP용 AI 단독 엔드포인트도 추가하지 않는다.
 
 입력 예시:
 
@@ -31,7 +31,7 @@
 ]
 ```
 
-채팅 담당은 본인 방인지 확인하고 최근 **완료된 10개 Q/A**를 가져와 시간순으로 위 형식에 펼친 뒤 새 질문을 마지막에 추가한다. JSON·SSE 모두 같은 문맥 조회·저장 함수를 사용한다. AI 함수는 새 질문 포함 최대 **21개 메시지**를 유지하고 시스템 프롬프트를 별도로 붙여 실제 제공자 API를 호출한다. 기준은 `app/ai/service.py`의 `CONTEXT_EXCHANGES = 10`과 여기서 계산한 `MAX_CONTEXT_MESSAGES`다. 공감과 격려를 하되 사용자의 사실 주장을 무조건 사실로 확정하거나 위험한 행동을 부추기지 않도록 프롬프트를 작성한다.
+채팅 담당은 본인 방인지 확인하고 최근 **완료된 10개 Q/A**를 가져와 시간순으로 위 형식에 펼친 뒤 새 질문을 마지막에 추가한다. SSE 모두 같은 문맥 조회·저장 함수를 사용한다. AI 함수는 새 질문 포함 최대 **21개 메시지**를 유지하고 시스템 프롬프트를 별도로 붙여 실제 제공자 API를 호출한다. 기준은 `app/ai/service.py`의 `CONTEXT_EXCHANGES = 10`과 여기서 계산한 `MAX_CONTEXT_MESSAGES`다. 공감과 격려를 하되 사용자의 사실 주장을 무조건 사실로 확정하거나 위험한 행동을 부추기지 않도록 프롬프트를 작성한다.
 
 실패는 `AIError(사용자용 안내, status_code=502, 503 또는 504)`로 전달한다. 공통 예외 처리기가 HTTP 응답으로 변환한다. 원본 제공자 오류 본문·API 키를 사용자에게 전달하지 않는다. 자동 재시도는 하지 않는다. SSE 경로에서는 응답 시작 후 `AIError`를 `error` 이벤트로 변환한다.
 
