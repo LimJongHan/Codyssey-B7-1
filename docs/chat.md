@@ -169,5 +169,5 @@ sqlite3 .data/positive-bot.db "SELECT name, tbl_name FROM sqlite_master WHERE ty
 ## 배포 시 확인
 
 - 실제 제공자의 SSE 조각이 프록시를 거쳐 순차 도착하고, 완료된 답변이 재접속 뒤 조회되는지 확인한다.
-- DB 커밋 후 연결이 끊기면 저장됐지만 `done`을 받지 못할 수 있다. 화면 안내대로 내역을 확인한 뒤 수동 재시도한다.
+- DB 커밋 후 연결이 끊기면 저장됐지만 `done`을 받지 못할 수 있다. 화면 안내대로 내역을 확인한 뒤 입력창에서 질문을 다시 보낸다.
 - 배포: AWS EC2 서버의 로컬 SQLite 파일(`DATABASE_PATH`)을 사용한다. 서버 구성과 업데이트 절차는 [README의 배포](../README.md#배포-aws-ec2) 절에 있다.

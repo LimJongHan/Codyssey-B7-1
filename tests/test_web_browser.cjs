@@ -143,6 +143,7 @@ async function main() {
       await send(`HTTP ${status} 확인`);
       await idle();
       assert.ok((await page.locator('.err-txt').last().innerText()).includes(detail));
+      assert.equal(await page.locator('.btn-retry').count(), 0);
       await page.unroute(streamUrl);
     }
     for (const status of [500, 503]) {
@@ -154,6 +155,7 @@ async function main() {
       await send(`SSE ${status} 확인`);
       await idle();
       assert.ok((await page.locator('.err-txt').last().innerText()).includes(detail));
+      assert.equal(await page.locator('.btn-retry').count(), 0);
       assert.match(await page.locator('.msg-row--incomplete').last().innerText(), /완료되지 않은 응답/);
       await page.unroute(streamUrl);
     }

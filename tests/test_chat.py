@@ -134,4 +134,3 @@ class ListMessagesTests(ChatTestCase):
                 response = self.client.get(f"/api/rooms/{room_id}/messages")
                 self.assertEqual(response.status_code, 404)
                 self.assertEqual(response.json(), {"detail": "채팅방을 찾을 수 없습니다."})
-
