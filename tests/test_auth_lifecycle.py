@@ -6,12 +6,10 @@ from datetime import UTC, datetime, timedelta
 from http.cookies import SimpleCookie
 from unittest.mock import patch
 
-from fastapi import Request, Response
 from fastapi.testclient import TestClient
 
 from auth_support import AuthTestCase
 
-from app.auth.cookies import set_session_cookie
 from app.db import connect
 from app.main import app
 
@@ -36,13 +34,6 @@ class AuthLifecycleTests(AuthTestCase):
             self.assertTrue(deleted["secure"])
             self.assertEqual(deleted["max-age"], "0")
             self.assertIsNone(browser.cookies.get("session"))
-
-    def test_deployment_cookie_requires_https_even_behind_proxy(self):
-        request = Request({"type": "http", "scheme": "http", "server": ("example.test", 80), "path": "/", "headers": []})
-        response = Response()
-        with patch.dict(os.environ, {"VERCEL": "1"}):
-            set_session_cookie(response, request, "test-token")
-        self.assertTrue(SimpleCookie(response.headers["set-cookie"])["session"]["secure"])
 
     def test_absolute_lifetime_does_not_extend_on_access(self):
         self.signup()

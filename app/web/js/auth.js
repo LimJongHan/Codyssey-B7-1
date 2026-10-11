@@ -210,7 +210,7 @@
             showToast('로그인을 진행해 주세요.', 'info');
           }, 900);
         } else {
-          setTimeout(() => { window.location.href = '/chat'; }, 900);
+          setTimeout(() => { window.location.href = '/'; }, 900);
         }
       } else {
         if (res.status === 409) {

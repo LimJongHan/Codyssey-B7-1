@@ -6,7 +6,7 @@ from unittest.mock import patch
 import httpx2
 from openai import AsyncOpenAI
 
-from app.ai.service import AIError, SYSTEM_PROMPT, generate_reply, stream_reply
+from app.ai.service import AIError, SYSTEM_PROMPT, stream_reply
 
 
 class AITests(unittest.IsolatedAsyncioTestCase):
@@ -31,13 +31,18 @@ class AITests(unittest.IsolatedAsyncioTestCase):
             )
         self.enterContext(patch("app.ai.service.AsyncOpenAI", side_effect=create_client))
 
-    def response(self, text="내일 면접이 있다고 말씀하셨어요.", status="stop"):
-        return httpx2.Response(200, json={
-            "id": "chatcmpl_test", "object": "chat.completion", "created": 0,
+    def response(self, text="내일 면접이 있다고 말씀하셨어요.", status="stop", choices=None):
+        event = {
+            "id": "chatcmpl_test", "object": "chat.completion.chunk", "created": 0,
             "model": "gpt-5-mini",
-            "choices": [{"index": 0, "finish_reason": status,
-                         "message": {"role": "assistant", "content": text}}],
-        })
+            "choices": choices if choices is not None else [{"index": 0, "finish_reason": status,
+                         "delta": {"role": "assistant", "content": text}}],
+        }
+        return httpx2.Response(200, text="data: " + json.dumps(event) + "\n\ndata: [DONE]\n\n",
+                              headers={"content-type": "text/event-stream"})
+
+    async def collect_reply(self, messages):
+        return "".join([text async for text in stream_reply(messages)])
 
     async def test_reply_preserves_context_and_logs_success(self):
         def handler(request):
@@ -51,7 +56,7 @@ class AITests(unittest.IsolatedAsyncioTestCase):
             return self.response()
         self.mock_api(handler)
         with self.assertLogs("app.ai.service", level="INFO") as logs:
-            answer = await generate_reply(self.messages)
+            answer = await self.collect_reply(self.messages)
         self.assertIn("면접", answer)
         self.assertEqual(len(self.calls), 1)
         self.assertIn("ai_call_start", str(logs.output))
@@ -75,7 +80,7 @@ class AITests(unittest.IsolatedAsyncioTestCase):
                     return self.response()
 
                 self.mock_api(handler)
-                await generate_reply(messages)
+                await self.collect_reply(messages)
                 self.assertEqual(messages, original)
 
     async def test_api_failures_are_safe_and_not_retried(self):
@@ -92,7 +97,7 @@ class AITests(unittest.IsolatedAsyncioTestCase):
                 self.mock_api(handler)
                 with self.assertLogs("app.ai.service", level="WARNING") as logs:
                     with self.assertRaises(AIError) as error:
-                        await generate_reply(self.messages)
+                        await self.collect_reply(self.messages)
                 self.assertEqual(error.exception.status_code, expected)
                 self.assertEqual(len(self.calls), 1)
                 self.assertNotIn("test-secret", str(error.exception) + str(logs.output))
@@ -102,19 +107,15 @@ class AITests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(status=status):
                 self.mock_api(lambda request: self.response(text, status))
                 with self.assertRaises(AIError) as error:
-                    await generate_reply(self.messages)
+                    await self.collect_reply(self.messages)
                 self.assertEqual(error.exception.status_code, 502)
 
     async def test_missing_choices_or_content_is_rejected(self):
-        responses = [
-            {"choices": []},
-            {"choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": None}}]},
-        ]
-        for body in responses:
-            with self.subTest(body=body):
-                self.mock_api(lambda request: httpx2.Response(200, json=body))
+        for choices in ([], [{"index": 0, "finish_reason": "stop", "delta": {"role": "assistant", "content": None}}]):
+            with self.subTest(choices=choices):
+                self.mock_api(lambda request: self.response(choices=choices))
                 with self.assertRaises(AIError) as error:
-                    await generate_reply(self.messages)
+                    await self.collect_reply(self.messages)
                 self.assertEqual(error.exception.status_code, 502)
 
     async def test_blank_model_uses_codyssey_default(self):
@@ -123,7 +124,7 @@ class AITests(unittest.IsolatedAsyncioTestCase):
             return self.response()
         self.mock_api(handler)
         with patch.dict(os.environ, {"AI_MODEL": ""}):
-            self.assertIn("면접", await generate_reply(self.messages))
+            self.assertIn("면접", await self.collect_reply(self.messages))
 
     async def test_invalid_configuration_does_not_call_api(self):
         for settings in [{"AI_API_KEY": ""}, {"AI_TIMEOUT_SECONDS": "bad"},
@@ -131,7 +132,7 @@ class AITests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(settings=settings), patch.dict(os.environ, settings):
                 with patch("app.ai.service.AsyncOpenAI") as client:
                     with self.assertRaises(AIError) as error:
-                        await generate_reply(self.messages)
+                        await self.collect_reply(self.messages)
                     self.assertEqual(error.exception.status_code, 503)
                     client.assert_not_called()
 

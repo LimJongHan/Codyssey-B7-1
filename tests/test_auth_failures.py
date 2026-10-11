@@ -1,4 +1,3 @@
-import os
 import sqlite3
 from unittest.mock import patch
 
@@ -78,12 +77,6 @@ class AuthFailureTests(AuthTestCase):
             self.assertNotIn('"short"', response.text)
             self.assertTrue(all("input" not in error for error in response.json()["detail"]))
             self.assertEqual(response.headers["cache-control"], "no-store")
-
-    def test_deployment_storage_guard_stays_in_place(self):
-        with patch.dict(os.environ, {"VERCEL": "1"}):
-            response = self.client.post("/api/auth/login", json={"username": "alice", "password": "example-password"})
-        self.assertEqual(response.status_code, 500)
-        self.assertNotIn("set-cookie", response.headers)
 
     def test_auth_success_logs_do_not_contain_secrets(self):
         with self.assertLogs("app.auth.router", level="INFO") as logs:

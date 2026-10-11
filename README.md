@@ -17,6 +17,7 @@ Python 3.12와 [uv](https://docs.astral.sh/uv/getting-started/installation/)를 
 ```sh
 uv sync --locked
 cp .env.example .env
+# .env의 AI_API_KEY에 Codyssey 발급 키를 입력한 뒤 실행한다.
 uv run --env-file .env uvicorn app.main:app --reload
 ```
 
@@ -44,7 +45,7 @@ uv run --env-file .env uvicorn app.main:app --reload
 ```text
 브라우저(app/web) → FastAPI(app/main.py)
                      ├─ auth: 로그인 및 사용자 확인
-                     └─ chat: 방 소유권 확인 → ai.stream_reply / generate_reply → 대화 저장
+                     └─ chat: 방 소유권 확인 → ai.stream_reply → 대화 저장
                           └─ SQLite(app/db.py)
 ```
 
@@ -57,9 +58,9 @@ uv run --env-file .env uvicorn app.main:app --reload
 
 `app/main.py`, `pyproject.toml`, `uv.lock`, `.env.example`은 통합 담당 1명을 정해 변경을 모은다. 상세 연결 규칙과 브랜치 운영은 [협업 계약](docs/CONTRIBUTING.md)에 있다. 팀원 이름과 개인별 실제 작업 요약은 각 담당 PR에서 위 표를 갱신한다.
 
-인증 작업 작성자: **하루이(Git 표시명)**. 회원가입·Argon2id 비밀번호 검증·24시간 DB 세션·로그인·현재 사용자 확인·로그아웃·인증 실패와 저장소 장애 처리를 구현했다. 인증 테스트와 기존 템플릿 회귀 검증, 인증 사용법 문서를 작성했다. 인증 전용 의존성 `argon2-cffi` 및 잠금 파일 변경은 통합 시 함께 반영한다.
+인증 작업 작성자: **하루이(Git 표시명)**. 회원가입·Argon2id 비밀번호 검증·24시간 DB 세션·로그인·현재 사용자 확인·로그아웃·인증 실패와 저장소 장애 처리를 구현했다. 인증 테스트와 기존 템플릿 회귀 검증, 인증 사용법 문서를 작성했다.
 
-채팅·DB 작업 작성자: **Lim Jonghan(Git 표시명)**. 채팅방 생성·목록, 본인 대화 내역 조회, 방 소유권 확인, 최근 Q/A 문맥 구성과 AI 호출 연결, JSON 질문 전송과 성공한 Q/A 저장, AI·DB 실패 처리와 요청·저장 로그를 구현했다. 조회용 인덱스를 추가하고 채팅 테스트와 [채팅 기능명세](docs/chat.md)를 작성했다.
+채팅·DB 작업 작성자: **Lim Jonghan(Git 표시명)**. 채팅방 생성·목록, 본인 대화 내역 조회, 방 소유권 확인, 최근 Q/A 문맥 구성과 AI 호출 연결, 질문 전송과 성공한 Q/A 저장, AI·DB 실패 처리와 요청·저장 로그를 구현했다. 조회용 인덱스를 추가하고 채팅 테스트와 [채팅 기능명세](docs/chat.md)를 작성했다.
 
 ## API 계약
 
@@ -77,7 +78,6 @@ uv run --env-file .env uvicorn app.main:app --reload
 | `GET /api/rooms` | 없음 | `200 [Room]`, 최신순 |
 | `GET /api/rooms/{room_id}/messages` | 없음 | `200 [Exchange]`, 과거→최신 |
 | `POST /api/rooms/{room_id}/messages/stream` | `{"question":"오늘 많이 지쳤어"}` | `200 text/event-stream` |
-| `POST /api/rooms/{room_id}/messages` | `{"question":"오늘 많이 지쳤어"}` | `201 Exchange` |
 
 응답 형식은 아래와 같다(값은 예시). `created_at`은 소수 초를 포함한 UTC다.
 
@@ -99,11 +99,11 @@ AI 스트림은 OpenAI SDK의 `chat.completions.stream()`과 `content.delta` 이
 
 스트림 시작 전 인증·입력·소유권 오류는 HTTP `401`·`422`·`404`다. 시작 후에는 HTTP 상태를 바꿀 수 없으므로 `200`이어도 반드시 마지막 `done` 또는 `error`를 확인한다. 종료 이벤트 없이 연결이 끊기면 완료로 표시하지 않는다. 답변 완료 전 연결 중단은 저장하지 않으며, DB 커밋 후 연결이 끊긴 경우에는 저장됐지만 `done`을 못 받을 수 있다. 자동 재전송은 하지 않는다.
 
-JSON·SSE 전송은 같은 문맥 조회·저장 함수를 사용한다. 서버는 해당 방의 최근 완료 Q/A 10개와 새 질문, 총 21개 메시지를 AI에 전달하며 가장 오래된 질문도 유지한다. 기준은 `app/ai/service.py`의 `CONTEXT_EXCHANGES`와 여기서 계산한 `MAX_CONTEXT_MESSAGES`다. 스트리밍 도중에는 DB 연결을 유지하지 않는다.
+서버는 해당 방의 최근 완료 Q/A 10개와 새 질문, 총 21개 메시지를 AI에 전달하며 가장 오래된 질문도 유지한다. 기준은 `app/ai/service.py`의 `CONTEXT_EXCHANGES`와 여기서 계산한 `MAX_CONTEXT_MESSAGES`다. 스트리밍 도중에는 DB 연결을 유지하지 않는다.
 
-화면은 POST `fetch`로 SSE를 읽어 한 말풍선에 답변 조각을 이어 붙인다. UTF-8 문자와 이벤트가 네트워크 조각 사이에서 나뉘어도 처리한다. 응답 중에는 중복 전송·방 이동·로그아웃을 막고, 조각을 받을 때마다 40초 수신 대기 제한을 갱신한다. `done` 수신 시 완료로 표시하며, 오류나 연결 중단 시 부분 답변은 미완료로 남기고 안내를 표시한다. HTTP 및 SSE `500`·`503`을 포함한 오류의 `detail` 문자열을 그대로 표시하며 자동 재시도하지 않는다.
+화면은 POST `fetch`로 SSE를 읽어 한 말풍선에 답변 조각을 이어 붙인다. UTF-8 문자와 이벤트가 네트워크 조각 사이에서 나뉘어도 처리한다. 대화 내역 조회 중에는 중복 조회와 방 이동을 막는다. 응답 중에는 중복 전송·방 이동·로그아웃을 막고, 조각을 받을 때마다 40초 수신 대기 제한을 갱신한다. `done` 수신 시 완료로 표시하며, 오류나 연결 중단 시 부분 답변은 미완료로 남기고 안내를 표시한다. HTTP 및 SSE `500`·`503`을 포함한 오류의 `detail` 문자열을 그대로 표시하며 재시도 버튼은 제공하지 않는다. 오류가 나면 대화 내역을 확인한 뒤 입력창에서 질문을 다시 보낸다.
 
-`/`, `/chat`, `/guest`는 하나의 `app/web/chat.html`을 사용한다. 메시지 영역만 스크롤되고 입력창은 그 아래에 별도 배치되어 여러 줄 입력과 긴 답변이 겹치지 않는다. 로그인 사용자는 헤더에서 로그아웃할 수 있다. 서버가 로그아웃에 실패하면 안내를 표시하고 현재 화면을 유지한다.
+`/`는 `app/web/chat.html`을 제공한다. 메시지 영역만 스크롤되고 입력창은 그 아래에 별도 배치되어 여러 줄 입력과 긴 답변이 겹치지 않는다. 로그인 사용자는 헤더에서 로그아웃할 수 있다. 서버가 로그아웃에 실패하면 안내를 표시하고 현재 화면을 유지한다.
 
 ## DB 구조와 확인
 
@@ -116,7 +116,7 @@ JSON·SSE 전송은 같은 문맥 조회·저장 함수를 사용한다. 서버�
 
 `users → rooms → exchanges`로 사용자별 질문·응답·생성 시각을 추적한다. 생성 시각은 UTC다. 한 행에 질문과 답변을 함께 저장한다. 채팅 조회용으로 `rooms(user_id)`, `exchanges(room_id)` 인덱스를 둔다. 별도의 ORM이나 마이그레이션 프레임워크는 사용하지 않는다.
 
-SQLite CLI가 설치되어 있으면 기본 DB를 다음처럼 확인할 수 있다. 회원가입·로그인 시 users/sessions가 저장되고, 질문 전송(JSON·SSE)이 정상 완료되면 exchanges에 질문과 답변이 함께 저장된다.
+SQLite CLI가 설치되어 있으면 기본 DB를 다음처럼 확인할 수 있다. 회원가입·로그인 시 users/sessions가 저장되고, 질문 전송(SSE)이 정상 완료되면 exchanges에 질문과 답변이 함께 저장된다.
 
 ```sh
 sqlite3 .data/positive-bot.db '.tables'
@@ -139,7 +139,6 @@ AWS EC2(Ubuntu, 서울 리전) 한 대에서 실행한다. nginx가 80번 포트
 
 - DB는 서버 디스크의 SQLite 파일(`DATABASE_PATH`, 기본 `.data/positive-bot.db`)이다. 서비스 재시작과 재배포 후에도 데이터가 유지된다.
 - 환경 변수는 서버의 `.env`(권한 600)에 둔다. 키 목록은 `.env.example`과 같으며 `AI_API_KEY` 값은 저장소나 문서에 남기지 않는다.
-- 서버에는 `VERCEL`을 설정하지 않는다. 설정하면 `app/db.py`가 DB 접근을 막는다.
 - HTTP로 운영하므로 로그인 쿠키에 `Secure`가 붙지 않고 암호화되지 않은 채 전송된다. 도메인과 HTTPS는 적용하지 않았다.
 - Uvicorn은 `--proxy-headers --forwarded-allow-ips 127.0.0.1`로 실행해 nginx가 전달한 원래 요청 정보를 사용한다. SSE 응답에는 FastAPI가 `X-Accel-Buffering: no`를 붙이므로 nginx 버퍼링 설정을 따로 두지 않는다.
 
@@ -152,11 +151,10 @@ uv sync --locked --no-dev
 sudo systemctl restart positive-bot
 ```
 
-`pyproject.toml`의 `[tool.vercel]`과 `.vercelignore`는 이전 Vercel 배포 준비의 흔적이며 현재 배포에는 사용하지 않는다.
 
 ## 제출 전 확인
 
-2026-10-08 기준 Python 3.12에서 **전체 85개 테스트 통과**. 인증·쿠키·세션 유지·사용자 구분, JSON/SSE 문맥 21개 전달, 완료 후 저장, AI·DB 오류와 중단 시 미저장을 확인했다. 인증 연결 테스트도 실제 방 생성과 JSON/SSE 전송·조회·로그아웃 이후 차단을 검증한다. SSE 파서의 문자/이벤트 분할, 오류, 종료 이벤트 누락 등 Node.js 테스트 **7개가 통과**했다.
+2026-10-11 기준 Python 3.12에서 **전체 76개 테스트 통과**. 인증·쿠키·세션 유지·사용자 구분, SSE 문맥 21개 전달, 완료 후 저장, AI·DB 오류와 중단 시 미저장을 확인했다. 인증 연결 테스트도 실제 방 생성과 SSE 전송·조회·로그아웃 이후 차단을 검증한다. SSE 파서의 문자/이벤트 분할, 오류, 종료 이벤트 누락 등 Node.js 테스트 **7개가 통과**했다.
 
 브라우저 회귀 검증은 Playwright가 설치된 환경에서 `node tests/test_web_browser.cjs`로 실행한다. 별도 설치된 Playwright를 사용하면 `NODE_PATH`에 해당 `node_modules`를 지정하고, 설치된 Chrome을 쓰려면 `BROWSER_CHANNEL=chrome`을 지정한다. 테스트가 임시 SQLite·Uvicorn·테스트용 AI를 실행해 실제 세션, 순차 표시·저장/재조회, 데스크톱/모바일 배치, 오류 안내·로그아웃을 확인한 후 정리한다. 실제 제공자의 SSE 응답과 원격 배포 반영은 별도로 확인해야 한다.
 
@@ -169,4 +167,4 @@ sudo systemctl restart positive-bot
 - [ ] 기능 브랜치·PR merge 기록, 팀원별 유의미한 커밋 10회 이상
 - [ ] 팀원 이름·실제 작업 요약, GitHub 링크·배포 URL 기재
 
-필수 요구사항 전체는 [MISSION.md](MISSION.md)를 따른다. 위 항목은 템플릿 테스트 통과만으로 완료되지 않는다.
+필수 요구사항 전체는 [MISSION.md](MISSION.md)를 따른다. 공개 서버의 실제 AI 응답과 저장 유지는 배포 후 확인한다.

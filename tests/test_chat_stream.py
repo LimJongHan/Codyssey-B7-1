@@ -22,7 +22,7 @@ class ChatStreamTests(unittest.TestCase):
     def setUp(self):
         directory = self.enterContext(tempfile.TemporaryDirectory())
         self.enterContext(patch.dict(os.environ, {
-            "DATABASE_PATH": str(Path(directory) / "test.db"), "VERCEL": "",
+            "DATABASE_PATH": str(Path(directory) / "test.db"),
         }))
         self.client = self.enterContext(TestClient(app))
         app.dependency_overrides[get_current_user] = lambda: User(id=1, username="owner")
@@ -52,7 +52,10 @@ class ChatStreamTests(unittest.TestCase):
             yield '힘든 하루였군요.\n'
             yield '"수고하셨어요."'
         with patch("app.chat.router.stream_reply", stream):
-            response = self.send()
+            with self.assertLogs("app.chat.router", "INFO") as logs:
+                response = self.send(question="  오늘 힘들었어  ")
+        self.assertIn("request_received user_id=1 room_id=1", str(logs.output))
+        self.assertIn("db_save_success user_id=1 room_id=1", str(logs.output))
         self.assertEqual(response.status_code, 200)
         self.assertIn("text/event-stream", response.headers["content-type"])
         self.assertIn("힘든 하루였군요.", response.text)
@@ -65,6 +68,7 @@ class ChatStreamTests(unittest.TestCase):
         self.assertEqual(row["answer"], ''.join(data["text"] for event, data in events if event == "delta"))
         self.assertEqual(events[-1][1]["id"], row["id"])
         self.assertEqual(events[-1][1]["question"], row["question"])
+        self.assertEqual(self.client.get("/api/rooms/1/messages").json(), [events[-1][1]])
 
     def test_auth_owner_and_input_checked_before_ai(self):
         with patch("app.chat.router.stream_reply") as ai:
@@ -86,11 +90,12 @@ class ChatStreamTests(unittest.TestCase):
         async def stream(messages):
             self.assertEqual(messages[0], {"role": "user", "content": "q2"})
             self.assertEqual(messages[-2], {"role": "assistant", "content": "a11"})
+            self.assertEqual(messages[-1]["content"], "a" * 2000)
             self.assertEqual(len(messages), 21)  # AI 함수도 가장 오래된 질문을 자르지 않는다
             self.assertNotIn("private", str(messages))
             yield "답변"
         with patch("app.chat.router.stream_reply", stream):
-            self.assertEqual(self.events(self.send())[-1][0], "done")
+            self.assertEqual(self.events(self.send(question="a" * 2000))[-1][0], "done")
 
     def test_ai_failure_sends_error_without_saving(self):
         for code in (502, 503, 504):
@@ -98,7 +103,9 @@ class ChatStreamTests(unittest.TestCase):
                 yield "부분 응답"
                 raise AIError("응답 실패", code)
             with self.subTest(code=code), patch("app.chat.router.stream_reply", stream):
-                response = self.send()
+                with self.assertLogs("app.chat.router", "WARNING") as logs:
+                    response = self.send()
+                self.assertIn(f"chat_ai_failure user_id=1 room_id=1 status={code}", str(logs.output))
                 self.assertIn("응답 실패", response.text)
                 events = self.events(response)
                 self.assertEqual([event for event, _ in events], ["delta", "error"])
@@ -112,7 +119,9 @@ class ChatStreamTests(unittest.TestCase):
         with patch("app.chat.router.stream_reply", stream):
             # 저장 시점에만 실패하도록 두 번째 연결을 대체한다.
             with patch("app.chat.router.connect", side_effect=[connect(), sqlite3.OperationalError("private")]):
-                response = self.send()
+                with self.assertLogs("app.chat.router", "ERROR") as logs:
+                    response = self.send()
+        self.assertIn("db_save_failure user_id=1 room_id=1", str(logs.output))
         events = self.events(response)
         self.assertEqual(events[-1][0], "error")
         self.assertEqual(events[-1][1]["status_code"], 500)
@@ -125,7 +134,7 @@ class ChatStreamTests(unittest.TestCase):
                 response = self.client.get(path)
                 self.assertEqual(response.status_code, 500)
                 self.assertEqual(response.json(), {"detail": "대화 내역을 불러오지 못했습니다."})
-            for path in ("/api/rooms/1/messages", "/api/rooms/1/messages/stream"):
+            for path in ("/api/rooms/1/messages/stream",):
                 response = self.client.post(path, json={"question": "안녕"})
                 self.assertEqual(response.status_code, 500)
                 self.assertEqual(response.json(), {"detail": "대화 내역을 불러오지 못했습니다."})

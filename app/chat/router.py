@@ -8,7 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 
-from app.ai.service import AIError, CONTEXT_EXCHANGES, Message, generate_reply, stream_reply
+from app.ai.service import AIError, CONTEXT_EXCHANGES, Message, stream_reply
 from app.auth.dependencies import get_current_user
 from app.auth.schemas import User
 from app.chat.schemas import ChatDelta, ChatError, ChatRequest, Exchange, Room, RoomCreate
@@ -112,21 +112,6 @@ def list_messages(room_id: int, user: CurrentUser):
         logger.exception("db_read_failure user_id=%s", user.id)
         raise HTTPException(status_code=500, detail="대화 내역을 불러오지 못했습니다.") from None
     return [dict(exchange) for exchange in exchanges]
-
-
-@router.post("/{room_id}/messages", response_model=Exchange, status_code=201)
-async def send_message(
-    room_id: int,
-    body: ChatRequest,
-    user: CurrentUser,
-    messages: Annotated[list[Message], Depends(_load_messages)],
-):
-    try:
-        answer = await generate_reply(messages)
-    except AIError as error:
-        logger.warning("chat_ai_failure user_id=%s room_id=%s status=%s", user.id, room_id, error.status_code)
-        raise
-    return await asyncio.to_thread(_save_exchange, room_id, body.question, answer, user.id)
 
 
 @router.post("/{room_id}/messages/stream", response_class=EventSourceResponse)

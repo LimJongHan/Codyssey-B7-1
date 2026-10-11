@@ -10,8 +10,6 @@ BASE_DIR = Path(__file__).resolve().parent
 
 @contextmanager
 def connect():
-    if os.getenv("VERCEL"):
-        raise RuntimeError("Vercel 배포용 영구 DB 연결이 필요합니다.")
     path = Path(os.getenv("DATABASE_PATH", ".data/positive-bot.db"))
     path.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(path)

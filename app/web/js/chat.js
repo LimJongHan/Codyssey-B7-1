@@ -13,7 +13,6 @@ import { APIError, responseError, readChatStream } from './api.js';
   const MAX_CHARS      = 2000;
   const WARN_CHARS     = 1800; // 경고 시작
   const DANGER_CHARS   = 1950; // 위험 표시
-  const RETRY_DELAY    = 1200; // 재시도 최소 간격(ms)
   const SEND_TIMEOUT   = 40_000; // 마지막 수신 이후의 대기 시간. 조각 수신마다 갱신한다
   const ROOM_TITLE_LEN = 30;   // 새 대화의 첫 질문 앞부분을 방 제목으로 쓴다
 
@@ -50,7 +49,6 @@ import { APIError, responseError, readChatStream } from './api.js';
   let isLoadingRoom = false;
   let isCollapsed  = false;
   let isLoggedIn   = false; // /api/auth/me 결과. 로그인 사용자에게는 게스트 안내를 보이지 않는다
-  let lastRetryTime= 0;
 
   /* ==========================================================================
      토스트 알림 시스템
@@ -182,6 +180,7 @@ import { APIError, responseError, readChatStream } from './api.js';
   }
 
   async function openRoom (room) {
+    if (isLoadingRoom) return;
     if (isSending) {
       showToast('답변을 기다리는 중이에요.', 'warn', 2000);
       return;
@@ -216,6 +215,7 @@ import { APIError, responseError, readChatStream } from './api.js';
 
   /* 새 대화: 화면만 비우고, 방은 첫 질문을 보낼 때 만든다 */
   btnNewChat?.addEventListener('click', () => {
+    if (isLoadingRoom) return;
     if (isSending) {
       showToast('답변을 기다리는 중이에요.', 'warn', 2000);
       return;
@@ -390,24 +390,6 @@ import { APIError, responseError, readChatStream } from './api.js';
         </div>`;
       row.querySelector('.err-txt').textContent = `⚠️ ${text}`;
 
-      // 재시도 버튼: 질문 원문은 HTML 속성에 넣지 않고 클릭 핸들러에서 그대로 사용한다
-      if (extra.retryText) {
-        const retryBtn = document.createElement('button');
-        retryBtn.className = 'btn-retry';
-        retryBtn.textContent = '다시 시도';
-        row.querySelector('.msg-bubble').append(retryBtn);
-        retryBtn.addEventListener('click', () => {
-          if (isSending || isLoggingOut || isLoadingRoom) return;
-          const now = Date.now();
-          if (now - lastRetryTime < RETRY_DELAY) {
-            showToast('잠시 후 다시 시도해 주세요.', 'warn', 2000);
-            return;
-          }
-          lastRetryTime = now;
-          row.remove();
-          sendMessage(extra.retryText);
-        });
-      }
     } else {
       // user
       row.innerHTML = `
@@ -522,7 +504,7 @@ import { APIError, responseError, readChatStream } from './api.js';
         message = '답변 수신이 지연되고 있습니다. 대화 내역을 확인한 뒤 다시 시도해 주세요.';
       } else if (!navigator.onLine) message = '인터넷 연결이 끊겼어요. 연결 확인 후 재시도해 주세요.';
       else message = '일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.';
-      appendMsg(message, 'error', error.status === 401 ? {} : { retryText: text });
+      appendMsg(message, 'error');
       if (error.status === 401) {
         renderAuthState(null);
         showToast(message, 'warn');

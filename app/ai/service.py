@@ -77,16 +77,6 @@ def _answer(response: ChatCompletion) -> str:
     return answer
 
 
-async def generate_reply(messages: list[Message]) -> str:
-    """최근 Q/A 10개와 새 질문을 포함한 최대 21개 메시지를 사용하고 응답 텍스트만 반환한다."""
-    async with _ai_client() as client:
-        response = await client.chat.completions.create(
-            model=os.getenv("AI_MODEL", "").strip() or "gpt-5-mini",
-            messages=[{"role": "system", "content": SYSTEM_PROMPT}, *messages[-MAX_CONTEXT_MESSAGES:]],
-        )
-        return _answer(response)
-
-
 async def stream_reply(messages: list[Message]) -> AsyncIterator[str]:
     """SDK의 텍스트 이벤트를 전달하고, 종료 시 완성된 답변인지 확인한다."""
     async with _ai_client() as client:

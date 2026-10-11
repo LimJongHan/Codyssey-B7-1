@@ -18,7 +18,7 @@ class TemplateTests(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.environment = patch.dict(os.environ, {
-            "DATABASE_PATH": str(Path(self.directory.name) / "test.db"), "VERCEL": "",
+            "DATABASE_PATH": str(Path(self.directory.name) / "test.db"),
         })
         self.environment.start()
         self.addCleanup(self.environment.stop)
@@ -28,11 +28,9 @@ class TemplateTests(unittest.TestCase):
     def test_web_and_health(self):
         self.assertEqual(self.client.get("/api/health").json(), {"status": "ok"})
         self.assertIn("긍정봇", self.client.get("/").text)
-        self.assertEqual(self.client.get("/static/app.js").status_code, 200)
-        self.assertEqual(self.client.get("/static/style.css").status_code, 200)
+        self.assertEqual(self.client.get("/static/js/chat.js").status_code, 200)
+        self.assertEqual(self.client.get("/static/css/chat.css").status_code, 200)
         self.assertEqual(self.client.get("/openapi.json").status_code, 200)
-        self.assertEqual(self.client.get("/").content, self.client.get("/chat").content)
-        self.assertEqual(self.client.get("/guest").content, self.client.get("/chat").content)
         self.assertEqual(self.client.get("/static/js/api.js").status_code, 200)
 
     def test_private_endpoints_require_login(self):
@@ -41,7 +39,7 @@ class TemplateTests(unittest.TestCase):
             ("GET", "/api/rooms", None),
             ("POST", "/api/rooms", {"title": "대화"}),
             ("GET", "/api/rooms/1/messages", None),
-            ("POST", "/api/rooms/1/messages", {"question": "안녕"}),
+            ("POST", "/api/rooms/1/messages/stream", {"question": "안녕"}),
         ]:
             with self.subTest(path=path, method=method):
                 self.assertEqual(self.client.request(method, path, json=body).status_code, 401)
@@ -57,10 +55,10 @@ class TemplateTests(unittest.TestCase):
                     url = path.replace("{room_id}", "1")
                     self.assertEqual(self.client.request(method, url, json={}).status_code, 401)
 
-    def test_input_validation_and_unimplemented_state(self):
+    def test_input_validation(self):
         app.dependency_overrides[get_current_user] = lambda: User(id=1, username="test")
         for question in ("", "  ", "a" * 2001):
-            self.assertEqual(self.client.post("/api/rooms/1/messages", json={"question": question}).status_code, 422)
+            self.assertEqual(self.client.post("/api/rooms/1/messages/stream", json={"question": question}).status_code, 422)
         self.assertEqual(self.client.post("/api/rooms", json={"title": " "}).status_code, 422)
         self.assertEqual(self.client.post("/api/auth/signup", json={"username": "demo", "password": "12345678"}).status_code, 201)
 
@@ -74,11 +72,3 @@ class TemplateTests(unittest.TestCase):
             self.assertEqual(db.execute("SELECT count(*) FROM users").fetchone()[0], 1)
             with self.assertRaises(sqlite3.IntegrityError):
                 db.execute("INSERT INTO rooms (user_id, title) VALUES (?, ?)", (999, "invalid"))
-
-    def test_vercel_does_not_use_local_sqlite(self):
-        with patch.dict(os.environ, {"VERCEL": "1"}):
-            with TestClient(app) as client:
-                self.assertEqual(client.get("/api/health").status_code, 200)
-            with self.assertRaises(RuntimeError):
-                with connect():
-                    pass

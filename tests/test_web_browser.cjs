@@ -36,7 +36,7 @@ async function main() {
     '-m', 'uvicorn', 'browser_app:app', '--app-dir', 'tests', '--host', '127.0.0.1', '--port', String(port),
   ], {
     cwd: root,
-    env: { ...process.env, PYTHONPATH: root, DATABASE_PATH: path.join(directory, 'test.db'), AI_API_KEY: '', VERCEL: '' },
+    env: { ...process.env, PYTHONPATH: root, DATABASE_PATH: path.join(directory, 'test.db'), AI_API_KEY: '' },
     stdio: ['ignore', 'ignore', 'pipe'],
   });
   let serverErrors = '';
@@ -96,6 +96,26 @@ async function main() {
     const rooms = await (await context.request.get(`${base}/api/rooms`)).json();
     const historyUrl = `${base}/api/rooms/${rooms[0].id}/messages`;
     assert.equal((await (await context.request.get(historyUrl)).json()).length, 1);
+    // 내역 조회 중 연속 클릭해도 요청과 말풍선을 중복 생성하지 않는다.
+    let historyRequests = 0;
+    let releaseHistory;
+    const historyGate = new Promise(resolve => { releaseHistory = resolve; });
+    const historyPattern = '**/api/rooms/*/messages';
+    await page.route(historyPattern, async route => {
+      historyRequests++;
+      await historyGate;
+      await route.continue();
+    });
+    await page.locator('.chat-item').first().dblclick();
+    await until(() => historyRequests > 0, '내역 조회 요청 없음');
+    await page.locator('#btnNewChat').click();
+    assert.equal(await page.locator('.chat-item.is-active').count(), 1);
+    releaseHistory();
+    await until(() => page.locator('.msg-row--bot').count(), '내역 조회 완료 실패');
+    assert.equal(historyRequests, 1);
+    assert.equal(await page.locator('.msg-row--user').count(), 1);
+    assert.equal(await page.locator('.msg-row--bot').count(), 1);
+    await page.unroute(historyPattern);
     await layoutFits('데스크톱');
     if (screenshots) await page.screenshot({ path: path.join(screenshots, 'chat-desktop.png') });
     await page.locator('#msgInput').fill('입력창 높이 확인\n'.repeat(15));
@@ -123,6 +143,7 @@ async function main() {
       await send(`HTTP ${status} 확인`);
       await idle();
       assert.ok((await page.locator('.err-txt').last().innerText()).includes(detail));
+      assert.equal(await page.locator('.btn-retry').count(), 0);
       await page.unroute(streamUrl);
     }
     for (const status of [500, 503]) {
@@ -134,6 +155,7 @@ async function main() {
       await send(`SSE ${status} 확인`);
       await idle();
       assert.ok((await page.locator('.err-txt').last().innerText()).includes(detail));
+      assert.equal(await page.locator('.btn-retry').count(), 0);
       assert.match(await page.locator('.msg-row--incomplete').last().innerText(), /완료되지 않은 응답/);
       await page.unroute(streamUrl);
     }
@@ -156,6 +178,11 @@ async function main() {
     await page.waitForURL(`${base}/auth`);
     assert.equal((await context.request.get(`${base}/api/auth/me`)).status(), 401);
     assert.equal((await context.request.get(historyUrl)).status(), 401);
+    await page.locator('#userId').fill(credentials.username);
+    await page.locator('#userPw').fill(credentials.password);
+    await page.locator('#submitBtn').click();
+    await page.waitForURL(`${base}/`);
+    await page.locator('#btnLogout').waitFor({ state: 'visible' });
     assert.deepEqual(errors, []);
     console.log('PASS: 실제 세션·SSE 순차 표시·중복 전송 차단·저장/재조회·데스크톱/모바일 배치·HTTP/SSE 500/503·중단·로그아웃');
   } catch (error) {
