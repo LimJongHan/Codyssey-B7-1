@@ -20,7 +20,7 @@ class ChatTestCase(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.environment = patch.dict(os.environ, {
-            "DATABASE_PATH": str(Path(self.directory.name) / "test.db"), "VERCEL": "",
+            "DATABASE_PATH": str(Path(self.directory.name) / "test.db"),
         })
         self.environment.start()
         self.addCleanup(self.environment.stop)

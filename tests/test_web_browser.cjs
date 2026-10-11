@@ -36,7 +36,7 @@ async function main() {
     '-m', 'uvicorn', 'browser_app:app', '--app-dir', 'tests', '--host', '127.0.0.1', '--port', String(port),
   ], {
     cwd: root,
-    env: { ...process.env, PYTHONPATH: root, DATABASE_PATH: path.join(directory, 'test.db'), AI_API_KEY: '', VERCEL: '' },
+    env: { ...process.env, PYTHONPATH: root, DATABASE_PATH: path.join(directory, 'test.db'), AI_API_KEY: '' },
     stdio: ['ignore', 'ignore', 'pipe'],
   });
   let serverErrors = '';

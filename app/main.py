@@ -1,5 +1,4 @@
 import logging
-import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -18,8 +17,7 @@ WEB_DIR = Path(__file__).resolve().parent / "web"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if not os.getenv("VERCEL"):
-        init_db()
+    init_db()
     yield
 
 
@@ -34,7 +32,7 @@ async def ai_error_handler(request, error: AIError):
     return JSONResponse(status_code=error.status_code, content={"detail": str(error)})
 
 
-# ── 웹 프론트엔드 페이지 서빙 (원본 디자인 100% 매핑) ──
+# 웹 페이지
 @app.get("/", include_in_schema=False)
 @app.get("/chat", include_in_schema=False)
 @app.get("/guest", include_in_schema=False)

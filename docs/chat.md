@@ -154,7 +154,7 @@ sqlite3 .data/positive-bot.db "SELECT name, tbl_name FROM sqlite_master WHERE ty
 
 ## 검증 결과
 
-2026-10-08, Python 3.12에서 채팅 테스트 **23개**를 포함한 전체 **85개**가 통과했다. 테스트는 임시 SQLite DB를 사용하며 AI 호출은 테스트 안에서만 대체한다.
+2026-10-11, Python 3.12에서 채팅 테스트 **23개**를 포함한 전체 **82개**가 통과했다. 테스트는 임시 SQLite DB를 사용하며 AI 호출은 테스트 안에서만 대체한다.
 
 | 파일 | 검증 내용 |
 | --- | --- |
@@ -171,4 +171,4 @@ sqlite3 .data/positive-bot.db "SELECT name, tbl_name FROM sqlite_master WHERE ty
 
 - 실제 제공자의 SSE 조각이 프록시를 거쳐 순차 도착하고, 완료된 답변이 재접속 뒤 조회되는지 확인한다.
 - DB 커밋 후 연결이 끊기면 저장됐지만 `done`을 받지 못할 수 있다. 화면 안내대로 내역을 확인한 뒤 수동 재시도한다.
-- 배포: AWS EC2 서버의 로컬 SQLite 파일(`DATABASE_PATH`)을 사용한다. 서버에 `VERCEL`을 설정하면 `app/db.py`가 DB 접근을 막으므로 설정하지 않는다. 서버 구성과 업데이트 절차는 [README의 배포](../README.md#배포-aws-ec2) 절에 있다.
+- 배포: AWS EC2 서버의 로컬 SQLite 파일(`DATABASE_PATH`)을 사용한다. 서버 구성과 업데이트 절차는 [README의 배포](../README.md#배포-aws-ec2) 절에 있다.

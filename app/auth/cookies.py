@@ -1,5 +1,3 @@
-import os
-
 from fastapi import Request, Response
 
 from app.auth.sessions import SESSION_SECONDS
@@ -12,7 +10,7 @@ def cookie_options(request: Request) -> dict:
         "path": "/",
         "httponly": True,
         "samesite": "lax",
-        "secure": request.url.scheme == "https" or bool(os.getenv("VERCEL")),
+        "secure": request.url.scheme == "https",
     }
 
 

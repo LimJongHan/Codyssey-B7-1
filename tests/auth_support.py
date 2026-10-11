@@ -14,7 +14,7 @@ class AuthTestCase(unittest.TestCase):
     def setUp(self):
         directory = self.enterContext(tempfile.TemporaryDirectory())
         self.enterContext(patch.dict(os.environ, {
-            "DATABASE_PATH": str(Path(directory) / "auth.db"), "VERCEL": "",
+            "DATABASE_PATH": str(Path(directory) / "auth.db"),
         }))
         self.addCleanup(app.dependency_overrides.clear)
         self.client = self.enterContext(TestClient(app))

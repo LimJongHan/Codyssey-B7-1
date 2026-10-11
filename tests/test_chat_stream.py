@@ -22,7 +22,7 @@ class ChatStreamTests(unittest.TestCase):
     def setUp(self):
         directory = self.enterContext(tempfile.TemporaryDirectory())
         self.enterContext(patch.dict(os.environ, {
-            "DATABASE_PATH": str(Path(directory) / "test.db"), "VERCEL": "",
+            "DATABASE_PATH": str(Path(directory) / "test.db"),
         }))
         self.client = self.enterContext(TestClient(app))
         app.dependency_overrides[get_current_user] = lambda: User(id=1, username="owner")

@@ -139,7 +139,6 @@ AWS EC2(Ubuntu, 서울 리전) 한 대에서 실행한다. nginx가 80번 포트
 
 - DB는 서버 디스크의 SQLite 파일(`DATABASE_PATH`, 기본 `.data/positive-bot.db`)이다. 서비스 재시작과 재배포 후에도 데이터가 유지된다.
 - 환경 변수는 서버의 `.env`(권한 600)에 둔다. 키 목록은 `.env.example`과 같으며 `AI_API_KEY` 값은 저장소나 문서에 남기지 않는다.
-- 서버에는 `VERCEL`을 설정하지 않는다. 설정하면 `app/db.py`가 DB 접근을 막는다.
 - HTTP로 운영하므로 로그인 쿠키에 `Secure`가 붙지 않고 암호화되지 않은 채 전송된다. 도메인과 HTTPS는 적용하지 않았다.
 - Uvicorn은 `--proxy-headers --forwarded-allow-ips 127.0.0.1`로 실행해 nginx가 전달한 원래 요청 정보를 사용한다. SSE 응답에는 FastAPI가 `X-Accel-Buffering: no`를 붙이므로 nginx 버퍼링 설정을 따로 두지 않는다.
 
@@ -152,11 +151,10 @@ uv sync --locked --no-dev
 sudo systemctl restart positive-bot
 ```
 
-`pyproject.toml`의 `[tool.vercel]`과 `.vercelignore`는 이전 Vercel 배포 준비의 흔적이며 현재 배포에는 사용하지 않는다.
 
 ## 제출 전 확인
 
-2026-10-08 기준 Python 3.12에서 **전체 85개 테스트 통과**. 인증·쿠키·세션 유지·사용자 구분, JSON/SSE 문맥 21개 전달, 완료 후 저장, AI·DB 오류와 중단 시 미저장을 확인했다. 인증 연결 테스트도 실제 방 생성과 JSON/SSE 전송·조회·로그아웃 이후 차단을 검증한다. SSE 파서의 문자/이벤트 분할, 오류, 종료 이벤트 누락 등 Node.js 테스트 **7개가 통과**했다.
+2026-10-11 기준 Python 3.12에서 **전체 82개 테스트 통과**. 인증·쿠키·세션 유지·사용자 구분, JSON/SSE 문맥 21개 전달, 완료 후 저장, AI·DB 오류와 중단 시 미저장을 확인했다. 인증 연결 테스트도 실제 방 생성과 JSON/SSE 전송·조회·로그아웃 이후 차단을 검증한다. SSE 파서의 문자/이벤트 분할, 오류, 종료 이벤트 누락 등 Node.js 테스트 **7개가 통과**했다.
 
 브라우저 회귀 검증은 Playwright가 설치된 환경에서 `node tests/test_web_browser.cjs`로 실행한다. 별도 설치된 Playwright를 사용하면 `NODE_PATH`에 해당 `node_modules`를 지정하고, 설치된 Chrome을 쓰려면 `BROWSER_CHANNEL=chrome`을 지정한다. 테스트가 임시 SQLite·Uvicorn·테스트용 AI를 실행해 실제 세션, 순차 표시·저장/재조회, 데스크톱/모바일 배치, 오류 안내·로그아웃을 확인한 후 정리한다. 실제 제공자의 SSE 응답과 원격 배포 반영은 별도로 확인해야 한다.
 

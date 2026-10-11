@@ -18,7 +18,7 @@ class TemplateTests(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.environment = patch.dict(os.environ, {
-            "DATABASE_PATH": str(Path(self.directory.name) / "test.db"), "VERCEL": "",
+            "DATABASE_PATH": str(Path(self.directory.name) / "test.db"),
         })
         self.environment.start()
         self.addCleanup(self.environment.stop)
@@ -28,8 +28,8 @@ class TemplateTests(unittest.TestCase):
     def test_web_and_health(self):
         self.assertEqual(self.client.get("/api/health").json(), {"status": "ok"})
         self.assertIn("긍정봇", self.client.get("/").text)
-        self.assertEqual(self.client.get("/static/app.js").status_code, 200)
-        self.assertEqual(self.client.get("/static/style.css").status_code, 200)
+        self.assertEqual(self.client.get("/static/js/chat.js").status_code, 200)
+        self.assertEqual(self.client.get("/static/css/chat.css").status_code, 200)
         self.assertEqual(self.client.get("/openapi.json").status_code, 200)
         self.assertEqual(self.client.get("/").content, self.client.get("/chat").content)
         self.assertEqual(self.client.get("/guest").content, self.client.get("/chat").content)
@@ -74,11 +74,3 @@ class TemplateTests(unittest.TestCase):
             self.assertEqual(db.execute("SELECT count(*) FROM users").fetchone()[0], 1)
             with self.assertRaises(sqlite3.IntegrityError):
                 db.execute("INSERT INTO rooms (user_id, title) VALUES (?, ?)", (999, "invalid"))
-
-    def test_vercel_does_not_use_local_sqlite(self):
-        with patch.dict(os.environ, {"VERCEL": "1"}):
-            with TestClient(app) as client:
-                self.assertEqual(client.get("/api/health").status_code, 200)
-            with self.assertRaises(RuntimeError):
-                with connect():
-                    pass
