@@ -28,8 +28,6 @@ app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
 # 웹 페이지
 @app.get("/", include_in_schema=False)
-@app.get("/chat", include_in_schema=False)
-@app.get("/guest", include_in_schema=False)
 def chat_page():
     return FileResponse(WEB_DIR / "chat.html")
 

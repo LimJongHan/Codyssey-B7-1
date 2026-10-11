@@ -31,8 +31,6 @@ class TemplateTests(unittest.TestCase):
         self.assertEqual(self.client.get("/static/js/chat.js").status_code, 200)
         self.assertEqual(self.client.get("/static/css/chat.css").status_code, 200)
         self.assertEqual(self.client.get("/openapi.json").status_code, 200)
-        self.assertEqual(self.client.get("/").content, self.client.get("/chat").content)
-        self.assertEqual(self.client.get("/guest").content, self.client.get("/chat").content)
         self.assertEqual(self.client.get("/static/js/api.js").status_code, 200)
 
     def test_private_endpoints_require_login(self):

@@ -178,6 +178,11 @@ async function main() {
     await page.waitForURL(`${base}/auth`);
     assert.equal((await context.request.get(`${base}/api/auth/me`)).status(), 401);
     assert.equal((await context.request.get(historyUrl)).status(), 401);
+    await page.locator('#userId').fill(credentials.username);
+    await page.locator('#userPw').fill(credentials.password);
+    await page.locator('#submitBtn').click();
+    await page.waitForURL(`${base}/`);
+    await page.locator('#btnLogout').waitFor({ state: 'visible' });
     assert.deepEqual(errors, []);
     console.log('PASS: 실제 세션·SSE 순차 표시·중복 전송 차단·저장/재조회·데스크톱/모바일 배치·HTTP/SSE 500/503·중단·로그아웃');
   } catch (error) {
