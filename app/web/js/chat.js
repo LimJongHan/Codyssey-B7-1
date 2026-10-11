@@ -182,6 +182,7 @@ import { APIError, responseError, readChatStream } from './api.js';
   }
 
   async function openRoom (room) {
+    if (isLoadingRoom) return;
     if (isSending) {
       showToast('답변을 기다리는 중이에요.', 'warn', 2000);
       return;
@@ -216,6 +217,7 @@ import { APIError, responseError, readChatStream } from './api.js';
 
   /* 새 대화: 화면만 비우고, 방은 첫 질문을 보낼 때 만든다 */
   btnNewChat?.addEventListener('click', () => {
+    if (isLoadingRoom) return;
     if (isSending) {
       showToast('답변을 기다리는 중이에요.', 'warn', 2000);
       return;

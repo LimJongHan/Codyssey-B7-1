@@ -96,6 +96,26 @@ async function main() {
     const rooms = await (await context.request.get(`${base}/api/rooms`)).json();
     const historyUrl = `${base}/api/rooms/${rooms[0].id}/messages`;
     assert.equal((await (await context.request.get(historyUrl)).json()).length, 1);
+    // 내역 조회 중 연속 클릭해도 요청과 말풍선을 중복 생성하지 않는다.
+    let historyRequests = 0;
+    let releaseHistory;
+    const historyGate = new Promise(resolve => { releaseHistory = resolve; });
+    const historyPattern = '**/api/rooms/*/messages';
+    await page.route(historyPattern, async route => {
+      historyRequests++;
+      await historyGate;
+      await route.continue();
+    });
+    await page.locator('.chat-item').first().dblclick();
+    await until(() => historyRequests > 0, '내역 조회 요청 없음');
+    await page.locator('#btnNewChat').click();
+    assert.equal(await page.locator('.chat-item.is-active').count(), 1);
+    releaseHistory();
+    await until(() => page.locator('.msg-row--bot').count(), '내역 조회 완료 실패');
+    assert.equal(historyRequests, 1);
+    assert.equal(await page.locator('.msg-row--user').count(), 1);
+    assert.equal(await page.locator('.msg-row--bot').count(), 1);
+    await page.unroute(historyPattern);
     await layoutFits('데스크톱');
     if (screenshots) await page.screenshot({ path: path.join(screenshots, 'chat-desktop.png') });
     await page.locator('#msgInput').fill('입력창 높이 확인\n'.repeat(15));
