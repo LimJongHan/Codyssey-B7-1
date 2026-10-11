@@ -55,7 +55,8 @@ AI는 JSON 전송에서 `await generate_reply(messages) -> str`, SSE 전송에�
 
 ## 화면 동작
 
-- `/`, `/chat`, `/guest`는 공통 `chat.html`을 사용한다. 첫 질문 시 방을 만들고 POST `fetch`로 SSE를 요청한다.
+- `/`, `/chat`, `/guest`는 공통 `chat.html`을 사용한다. 첫 질문 시 질문 앞 30자를 제목으로 방을 만들고 POST `fetch`로 SSE를 요청한다.
+- 비로그인 사용자는 둘러보기만 할 수 있다. 입력창·전송 버튼이 비활성화되고 "로그인 후 대화할 수 있어요." 안내와 로그인 배너가 표시된다. 서버도 채팅 API를 `401`로 막는다.
 - `delta`는 같은 말풍선에 이어 붙이고 `done`의 저장된 답변·시각으로 완료한다. `error` 또는 종료 이벤트 없는 연결 중단은 부분 답변을 미완료로 표시한다. 자동 재전송하지 않는다.
 - HTTP/SSE `500`·`503` 등은 서버의 안전한 `detail` 문구를 표시한다. `401`은 로그인 안내, `422`는 입력 안내다.
 - 응답 중 중복 전송·방 이동·로그아웃을 막는다. 로그아웃 성공 시 로그인 화면으로 이동하며 실패하면 현재 화면을 유지하고 안내한다.
@@ -93,18 +94,31 @@ curl -sS -b "$AUTH_COOKIE_FILE" http://127.0.0.1:8000/api/rooms/1/messages
 | 이벤트 | 위치 | 기록 값 |
 | --- | --- | --- |
 | `request_received` | 질문 전송 시작(JSON·SSE) | `user_id`, `room_id` |
-| `db_save_success` | 방 생성, 대화 저장 성공 | `user_id`, `room_id`, 대화 저장 시 `exchange_id` |
-| `db_save_failure` | 방 생성, 대화 저장 실패 | `user_id`, `room_id`. JSON 경로는 상세 원인(traceback)을 서버 로그에만 남긴다 |
-| `chat_ai_failure` | JSON 전송의 AI 실패 | `user_id`, `room_id`, `status` |
-| `db_read_failure` | SSE 문맥 조회 실패 | `user_id`, `room_id` |
+| `db_save_success` | 방 생성, 대화 저장 성공(JSON·SSE) | `user_id`, `room_id`, 대화 저장 시 `exchange_id` |
+| `db_save_failure` | 방 생성, 대화 저장 실패(JSON·SSE) | `user_id`, 대화 저장 시 `room_id`. 상세 원인(traceback)은 서버 로그에만 남긴다 |
+| `chat_ai_failure` | AI 실패(JSON·SSE) | `user_id`, `room_id`, `status` |
+| `db_read_failure` | 방 목록·대화 내역·문맥 조회 실패 | `user_id`, 문맥 조회 시 `room_id`. 상세 원인은 서버 로그에만 남긴다 |
 
-AI 호출 자체의 `ai_call_start`·`ai_call_success`·`ai_call_failure`는 `app.ai.service`가 남긴다. 이 로그에는 사용자·방 정보가 없어서 채팅의 `chat_ai_failure`로 어느 요청이 실패했는지 추적한다. 실제 서버에서 AI 키 없이 질문을 보냈을 때의 로그는 아래와 같다.
+AI 호출 자체의 `ai_call_start`·`ai_call_success`·`ai_call_failure`는 `app.ai.service`가 남긴다. 이 로그에는 사용자·방 정보가 없어서 채팅의 `chat_ai_failure`로 어느 요청이 실패했는지 추적한다.
+
+2026-10-08 EC2 서버에서 실제 AI로 질문을 보냈을 때의 로그는 아래와 같다.
+
+```text
+INFO:app.chat.router:request_received user_id=1 room_id=1
+INFO:app.ai.service:ai_call_start
+INFO:app.ai.service:ai_call_success
+INFO:app.chat.router:db_save_success user_id=1 room_id=1 exchange_id=1
+```
+
+AI 호출이 실패하면 아래처럼 남고 대화는 저장되지 않는다(키 설정이 없을 때의 예).
 
 ```text
 INFO:app.chat.router:request_received user_id=1 room_id=1
 ERROR:app.ai.service:ai_call_failure reason=configuration
 WARNING:app.chat.router:chat_ai_failure user_id=1 room_id=1 status=503
 ```
+
+운영 서버에서는 `journalctl -u positive-bot`으로 확인한다.
 
 ## DB 구조
 

@@ -8,6 +8,27 @@
 
 공통 의존성 추가는 통합 담당자가 `uv add 패키지`로 반영한다. `uv.lock`을 손으로 합치지 않는다. 각 담당자는 `tests/test_auth.py`, `test_chat.py`, `test_ai.py`처럼 자기 영역 테스트 파일을 별도로 추가한다. 기존 `test_template.py`는 초기 기반 검증이며 기능 구현 후 미구현 상태에 관한 검증만 갱신한다.
 
+## 브랜치·커밋·PR 전략
+
+`main` 하나와 짧은 작업 브랜치로 운영한다. 별도 `develop` 브랜치는 두지 않고, PR 검증을 통과한 변경만 `main`에 합친다.
+
+| 구분 | 규칙 |
+| --- | --- |
+| `main` | 항상 배포 가능한 상태로 둔다. 배포 서버는 `main`만 받는다. 직접 push하지 않고 PR로만 merge한다. |
+| 작업 브랜치 | 최신 `main`에서 만들고 `유형/범위-설명`으로 이름 짓는다. 예: `feat/chat`, `fix/web-guest-auth`, `docs/submission`. 한 브랜치에는 한 가지 목적만 담는다. |
+| 유형 | 커밋과 같은 `feat`, `fix`, `docs`, `refactor`, `test`, `style`, `perf`, `build`, `chore`를 쓴다. |
+| `main` 반영 | 작업 중 `main`이 바뀌면 `main`을 작업 브랜치에 merge한다. 이미 공유한 브랜치는 rebase나 강제 push로 이력을 바꾸지 않는다. |
+| 커밋 | `유형(범위): 요약` 형식으로 한 커밋에 한 변경을 담는다. 범위는 `auth`, `chat`, `ai`, `ui`, `web`, `db`처럼 담당 영역을 쓴다. 횟수를 맞추는 빈 커밋은 만들지 않는다. |
+| PR | 제목은 커밋 형식을 따르고 본문은 `변경 내용`, `검증`, `통합 시 확인할 사항`으로 쓴다. 검증에는 테스트 결과와 `git diff --check origin/main...HEAD`를 적는다. 다른 담당 영역을 수정하면 PR 본문에 밝히고 해당 담당자와 공유한다. |
+| merge | 개인 커밋을 보존하도록 일반 merge(merge commit)를 사용한다. squash·rebase merge는 쓰지 않는다. merge한 브랜치는 PR 기록과 함께 남겨 둔다. |
+| 배포 | `main`에 merge한 뒤 서버에서 `git pull`, `uv sync --locked --no-dev`, `sudo systemctl restart positive-bot` 순서로 반영하고 `/api/health`를 확인한다. |
+
+```text
+main ──┬──────────────────── merge(PR) ──── merge(PR) ──▶ 배포
+       ├── feat/chat ── 커밋 ── 커밋 ──┘            │
+       └── fix/web-guest-auth ── 커밋 ──────────────┘
+```
+
 ## 인증 → 채팅
 
 - 공개 함수: `app.auth.dependencies.get_current_user(request) -> User`.
